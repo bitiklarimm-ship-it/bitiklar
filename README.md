@@ -10,7 +10,7 @@ davri, xattoti, GPS koordinatalari, manbalar, interaktiv xarita va QR-kodlar.
 | Backend | Python Django 5 + Django REST Framework, JWT |
 | Ma'lumotlar bazasi | PostgreSQL 16 |
 | Xarita | OpenStreetMap + Leaflet |
-| Rasmlar | Mahalliy disk, Cloudinary yoki S3 (`STORAGE_BACKEND`) |
+| Rasmlar | **Cloudflare R2** (`STORAGE_BACKEND=r2`); muqobil: mahalliy disk, S3, Cloudinary |
 | AI tahlil | Claude vision API (ixtiyoriy, `ANTHROPIC_API_KEY`) |
 | Hosting | Docker Compose (VPS) yoki Render (`render.yaml`) |
 
@@ -114,6 +114,28 @@ POST /api/auth/register/  POST /api/auth/token/  POST /api/auth/token/refresh/  
 - **InscriptionImage** — rasmlar (asosiy rasm, izoh, muallif)
 - **Source** — manbalar (kitob, maqola, arxiv, qo'lyozma, veb, dala tadqiqoti)
 - **Suggestion** — tadqiqotchilarning tuzatish takliflari
+
+## Rasmlar: Cloudflare R2
+
+1. Cloudflare Dashboard → **R2** → *Create bucket* → nomi: `bitiklar-media`.
+2. Bucket → **Settings → Public access** → *Custom Domains* → `media.bitiklar.uz` ulang
+   (domen Cloudflare'da bo'lishi kerak). Sinov uchun *R2.dev subdomain* ni yoqsangiz ham bo'ladi.
+3. R2 → **Manage R2 API Tokens** → *Create API token* → ruxsat: **Object Read & Write**, faqat shu bucket.
+   Access Key ID va Secret Access Key ni saqlab oling.
+4. `.env` (yoki Render env) ga yozing:
+
+```
+STORAGE_BACKEND=r2
+R2_ACCOUNT_ID=...          # Dashboard o'ng tomonidagi Account ID
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET_NAME=bitiklar-media
+R2_PUBLIC_DOMAIN=media.bitiklar.uz
+```
+
+Yuklangan rasmlar `https://media.bitiklar.uz/inscriptions/2026/11/...` ko'rinishidagi havola bilan
+beriladi va 1 yil keshlanadi. `R2_PUBLIC_DOMAIN` bo'sh qolsa, 7 kunlik imzolangan havolalar ishlatiladi
+(ommaviy sayt uchun tavsiya etilmaydi). Mahalliy sinovda `STORAGE_BACKEND=local` qo'ying.
 
 ## AI tahlil
 

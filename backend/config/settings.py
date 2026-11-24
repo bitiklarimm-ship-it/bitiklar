@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     "apps.ai",
 ]
 
-STORAGE_BACKEND = os.environ.get("STORAGE_BACKEND", "local")  # local | s3 | cloudinary
+STORAGE_BACKEND = os.environ.get("STORAGE_BACKEND", "local")  # local | r2 | s3 | cloudinary
 if STORAGE_BACKEND == "cloudinary":
     INSTALLED_APPS += ["cloudinary_storage", "cloudinary"]
 
@@ -114,7 +114,31 @@ STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
-if STORAGE_BACKEND == "s3":
+if STORAGE_BACKEND == "r2":
+    # Cloudflare R2 (S3-mos API). Rasmlar ommaviy domen orqali beriladi:
+    # R2_PUBLIC_DOMAIN = media.bitiklar.uz (bucketga ulangan custom domain) yoki pub-xxxx.r2.dev
+    from botocore.config import Config as BotoConfig
+
+    STORAGES["default"] = {"BACKEND": "storages.backends.s3.S3Storage"}
+    AWS_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
+    AWS_STORAGE_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME", "bitiklar-media")
+    AWS_S3_ENDPOINT_URL = f"https://{os.environ.get('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com"
+    AWS_S3_REGION_NAME = "auto"
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
+    AWS_S3_CUSTOM_DOMAIN = os.environ.get("R2_PUBLIC_DOMAIN") or None
+    AWS_S3_URL_PROTOCOL = "https:"
+    AWS_DEFAULT_ACL = None  # R2 ACL'ni qo'llab-quvvatlamaydi
+    AWS_QUERYSTRING_AUTH = not AWS_S3_CUSTOM_DOMAIN  # ommaviy domen bo'lmasa — imzolangan havola
+    AWS_QUERYSTRING_EXPIRE = 60 * 60 * 24 * 7
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "public, max-age=31536000, immutable"}
+    # boto3 >= 1.36 yangi checksum sarlavhalari R2 bilan muammo bermasligi uchun
+    AWS_S3_CLIENT_CONFIG = BotoConfig(
+        request_checksum_calculation="when_required",
+        response_checksum_validation="when_required",
+    )
+elif STORAGE_BACKEND == "s3":
     STORAGES["default"] = {"BACKEND": "storages.backends.s3.S3Storage"}
     AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
     AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME")
