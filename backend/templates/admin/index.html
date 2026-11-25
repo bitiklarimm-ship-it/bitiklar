@@ -1,0 +1,114 @@
+{% extends 'admin/base.html' %}
+{% load i18n %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}{% include "unfold/helpers/site_branding.html" %}{% endblock %}
+
+{% block content %}
+<div class="bk-dash">
+
+  <div class="bk-dash-head">
+    <div>
+      <h1>Assalomu alaykum{% if request.user.first_name %}, {{ request.user.first_name }}{% endif %}!</h1>
+      <p>BITIKLAR boshqaruv paneli — bugungi holat va bajarilishi kerak bo'lgan ishlar.</p>
+    </div>
+    <div class="bk-quick">
+      {% for q in quick %}
+        <a href="{{ q.link }}" class="bk-quick-btn" {% if q.blank %}target="_blank"{% endif %}>
+          <span class="material-symbols-outlined">{{ q.icon }}</span>{{ q.label }}
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="bk-kpis">
+    {% for k in kpi %}
+      <a href="{{ k.link }}" class="bk-kpi {% if k.tone == 'warn' and k.value %}is-warn{% endif %}">
+        <span class="material-symbols-outlined bk-kpi-icon">{{ k.icon }}</span>
+        <span class="bk-kpi-value">{{ k.value }}</span>
+        <span class="bk-kpi-label">{{ k.label }}</span>
+        {% if k.sub %}<span class="bk-kpi-sub">{{ k.sub }}</span>{% endif %}
+      </a>
+    {% endfor %}
+  </div>
+
+  <div class="bk-grid">
+    <section class="bk-card bk-span-2">
+      <header><h2><span class="material-symbols-outlined">pending_actions</span> Ko'rib chiqish navbati</h2>
+        <a href="{% url 'admin:catalog_inscription_changelist' %}?status__exact=pending">Barchasi →</a></header>
+      {% if pending_list %}
+        <table class="bk-table">
+          <thead><tr><th>Bitik</th><th>Obida</th><th>Kiritgan</th><th>Sana</th></tr></thead>
+          <tbody>
+          {% for p in pending_list %}
+            <tr>
+              <td><a href="{{ p.link }}"><b>{{ p.title }}</b></a></td>
+              <td>{{ p.monument }}</td><td>{{ p.by }}</td><td>{{ p.date|date:"d.m.Y H:i" }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="bk-empty">✓ Hammasi ko'rib chiqilgan</p>
+      {% endif %}
+
+      {% if suggestion_list %}
+        <h3 class="bk-sub">Tuzatish takliflari</h3>
+        <table class="bk-table">
+          <tbody>
+          {% for s in suggestion_list %}
+            <tr><td><a href="{{ s.link }}"><b>{{ s.title }}</b></a></td><td>{{ s.field }}</td><td>{{ s.by }}</td><td>{{ s.date|date:"d.m.Y" }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    </section>
+
+    <section class="bk-card">
+      <header><h2><span class="material-symbols-outlined">verified</span> Ma'lumot sifati</h2></header>
+      <ul class="bk-quality">
+        {% for q in quality %}
+          <li><a href="{{ q.link }}"><span>{{ q.label }}</span><b class="{% if q.value %}is-warn{% else %}is-ok{% endif %}">{{ q.value }}</b></a></li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="bk-card">
+      <header><h2><span class="material-symbols-outlined">translate</span> Tillar bo'yicha</h2></header>
+      {% for l in languages %}
+        <div class="bk-bar"><span>{{ l.label }}</span><div><i class="lang-{{ l.value }}" style="width: {{ l.pct }}%"></i></div><b>{{ l.n }}</b></div>
+      {% endfor %}
+      <header style="margin-top:18px"><h2><span class="material-symbols-outlined">map</span> Hududlar</h2></header>
+      {% for r in regions %}
+        <div class="bk-bar"><span>{{ r.name }}</span><div><i style="width: {{ r.pct }}%"></i></div><b>{{ r.n }}</b></div>
+      {% empty %}
+        <p class="bk-empty">Hali nashr qilingan bitik yo'q</p>
+      {% endfor %}
+    </section>
+
+    <section class="bk-card">
+      <header><h2><span class="material-symbols-outlined">history</span> So'nggi o'zgarishlar</h2></header>
+      <ul class="bk-history">
+        {% for h in history_list %}
+          <li><span class="bk-ht bk-ht-{% if h.type == '+' %}add{% elif h.type == '-' %}del{% else %}mod{% endif %}">{{ h.type }}</span>
+            <span><b>{{ h.title }}</b><small>{{ h.user }} · {{ h.date|date:"d.m H:i" }} · {{ h.status }}</small></span></li>
+        {% empty %}
+          <li class="bk-empty">Hali o'zgarish yo'q</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="bk-card">
+      <header><h2><span class="material-symbols-outlined">trending_up</span> Eng ko'p o'qilganlar</h2></header>
+      <ol class="bk-top">
+        {% for t in top_list %}
+          <li><a href="{% url 'admin:catalog_inscription_change' t.pk %}">{{ t.title_uz }}</a><b>{{ t.views_count }}</b></li>
+        {% empty %}
+          <li class="bk-empty">—</li>
+        {% endfor %}
+      </ol>
+    </section>
+  </div>
+</div>
+{% endblock %}
