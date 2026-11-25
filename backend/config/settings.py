@@ -185,7 +185,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
+        # Sessiya faqat GET uchun (yozish so'rovlari JWT bilan) — "CSRF token missing" xatosining oldini oladi
+        "apps.accounts.authentication.ReadOnlySessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticatedOrReadOnly"],
     "DEFAULT_FILTER_BACKENDS": [
