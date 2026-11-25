@@ -6,11 +6,12 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Circle, MapContainer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import type { InscriptionFeature, MonumentFeature } from "@/lib/api";
-import { arrow, bearing, directionsUrl, distance, formatDistance } from "@/lib/geo";
+import { arrow, bearing, distance, formatDistance } from "@/lib/geo";
 import { label, pick, type Dict, type Locale } from "@/lib/i18n";
 import { MAX_ZOOM } from "@/lib/tiles";
 import BaseLayers from "./BaseLayers";
-import FullscreenButton from "./FullscreenButton";
+import { AutoResize, FullscreenControl } from "./MapTools";
+import NavigateSheet from "./NavigateSheet";
 
 type Pos = { lat: number; lng: number; acc: number };
 type Item = { f: InscriptionFeature; lat: number; lng: number };
@@ -67,6 +68,8 @@ export default function LiveMap({
   const [msg, setMsg] = useState("");
   const [nearAlert, setNearAlert] = useState<Item | null>(null);
   const [selected, setSelected] = useState<string | null>(focus || null);
+  const [navTarget, setNavTarget] = useState<{ lat: number; lng: number; name: string } | null>(null);
+  const closeNav = useCallback(() => setNavTarget(null), []);
   const watchId = useRef<number | null>(null);
   const firstFix = useRef(true);
   const alerted = useRef<Set<string>>(new Set());
@@ -209,11 +212,13 @@ export default function LiveMap({
         </div>
       )}
 
+      <NavigateSheet target={navTarget} onClose={closeNav} />
       <div className="live-grid">
         <div className="map-wrap live-map">
           <MapContainer center={UZ} zoom={6} maxZoom={MAX_ZOOM} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
-            <BaseLayers labels={d.mapx} initial="hybrid" />
-            <FullscreenButton label={d.mapx.fullscreen} />
+            <BaseLayers labels={d.mapx} initial="street" />
+            <FullscreenControl label={d.mapx.fullscreen} />
+            <AutoResize />
             <MapBridge onMap={onMap} onMove={onMove} />
 
             {showMonuments && monuments.map((m) => (
@@ -249,9 +254,10 @@ export default function LiveMap({
                       </a>
                     ))}
                   </div>
-                  <a href={directionsUrl(pos, { lat: g.lat, lng: g.lng })} target="_blank" rel="noopener noreferrer">
+                  <button className="btn btn-dark btn-sm" style={{ width: "100%" }}
+                    onClick={() => setNavTarget({ lat: g.lat, lng: g.lng, name: pick(g.items[0].f.properties, "monument", lang) })}>
                     🧭 {t.directions}{pos ? ` · ${formatDistance(distance(pos.lat, pos.lng, g.lat, g.lng))}` : ""}
-                  </a>
+                  </button>
                 </Popup>
               </Marker>
             ))}
@@ -287,7 +293,7 @@ export default function LiveMap({
                   </button>
                   <div className="near-links">
                     <Link href={href(n.f.properties.slug)}>{t.open}</Link>
-                    <a href={directionsUrl(pos, n)} target="_blank" rel="noopener noreferrer">{t.directions}</a>
+                    <button className="linklike" onClick={() => setNavTarget({ lat: n.lat, lng: n.lng, name: pick(n.f.properties, "monument", lang) })}>{t.directions}</button>
                   </div>
                 </li>
               ))}

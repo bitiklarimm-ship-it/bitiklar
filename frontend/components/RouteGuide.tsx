@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Monument, RouteStop } from "@/lib/api";
 import { api } from "@/lib/client";
-import { arrow, bearing, directionsUrl, distance, formatDistance } from "@/lib/geo";
+import { arrow, bearing, distance, formatDistance } from "@/lib/geo";
 import { addVisit } from "@/lib/hunter";
 import { label, pick } from "@/lib/i18n";
 import { useDict, useLang } from "@/lib/useDict";
+import NavigateSheet from "./NavigateSheet";
 import ReadAloud from "./ReadAloud";
 
 const ARRIVE_METERS = 60;
@@ -24,6 +25,7 @@ export default function RouteGuide({ stops, routeSlug }: { stops: RouteStop[]; r
   const [arrived, setArrived] = useState<Record<number, boolean>>({});
   const [detail, setDetail] = useState<Monument | null>(null);
   const [err, setErr] = useState("");
+  const [nav, setNav] = useState(false);
   const watch = useRef<number | null>(null);
   const wake = useRef<{ release: () => Promise<void> } | null>(null);
 
@@ -83,6 +85,7 @@ export default function RouteGuide({ stops, routeSlug }: { stops: RouteStop[]; r
   const done = Object.keys(arrived).length;
   return (
     <div className="guide">
+      <NavigateSheet target={nav ? { lat, lng, name: pick(m, "name", lang) } : null} onClose={() => setNav(false)} />
       <div className="guide-steps">
         {stops.map((s, k) => (
           <button key={s.id} className={`gs ${k === idx ? "cur" : ""} ${arrived[k] ? "ok" : ""}`} onClick={() => setIdx(k)}
@@ -108,7 +111,7 @@ export default function RouteGuide({ stops, routeSlug }: { stops: RouteStop[]; r
           {pick(stop, "note", lang) && <p className="guide-note">💡 {pick(stop, "note", lang)}</p>}
           {err && <div className="alert warn" style={{ marginTop: 10 }}>{err}</div>}
           <div className="hero-actions" style={{ marginTop: 14 }}>
-            {!arrived[idx] && <a className="btn btn-dark" href={directionsUrl(pos, { lat, lng })} target="_blank" rel="noopener noreferrer">🧭 {d.live.directions}</a>}
+            {!arrived[idx] && <button className="btn btn-dark" onClick={() => setNav(true)}>🧭 {d.live.directions}</button>}
             {!arrived[idx] && <button className="btn btn-outline" onClick={arrive}>{g.imHere}</button>}
             {arrived[idx] && idx < stops.length - 1 && <button className="btn btn-primary" onClick={() => setIdx(idx + 1)}>{g.next} →</button>}
             {arrived[idx] && idx === stops.length - 1 && <span className="ok-text">🎉 {g.finished}</span>}
