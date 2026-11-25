@@ -260,6 +260,63 @@ git add backend/apps/*/migrations && git commit -m "migratsiyalar"
 - Ro'yxatda rasm, holat rangli belgi bilan; har bir qatorda **«✓ Nashr» / «✕ Rad»** tugmalari, forma tepasida ham.
 - Takliflarda hozirgi va taklif etilgan matn yonma-yon. Qorong'i rejim.
 
+## 4-bosqich: realroq xarita, rasm sifati, AI rejimlari
+
+**Xarita**
+- Standart ko'rinish — **sun'iy yo'ldosh (gibrid)**: Esri tasvirlari + joy nomlari va yo'llar, 21-darajagacha
+  kattalashtirish. Qatlamlar: sun'iy yo'ldosh, xarita (CARTO), relyef (OpenTopoMap). Hammasi kalitsiz.
+- **Butun ekran** tugmasi barcha xaritalarda.
+- **3D ko'rinish** (obida va bitik sahifalarida): MapLibre — sun'iy yo'ldosh + relyef (AWS Terrain Tiles) yoki
+  OpenFreeMap 3D binolar; burish, egish, obida atrofida aylanish.
+- Admin paneldagi joy tanlagich ham sun'iy yo'ldoshda ochiladi.
+
+**Rasmlar**
+- Asl fayl **siqilmasdan, to'liq sifatda** saqlanadi. Saytda tez ochilishi uchun 2400 px va 720 px yuqori sifatli
+  WebP nusxalar avtomatik yaratiladi (`apps/catalog/imaging.py`). Telefon rasmining burilishi to'g'rilanadi,
+  iPhone **HEIC** qabul qilinadi. Eski rasmlar uchun: `python manage.py build_thumbs` (ishga tushishda o'zi bajariladi).
+- Bitik sahifasida rasmni bosing → **to'liq ekran**, g'ildirak/ikki barmoq bilan 8× gacha kattalashtirish,
+  surish; 2× dan oshganda asl faylga o'tadi (xattotlik tafsilotlari), «Asl sifatda» yuklab olish.
+
+**AI rejimlari** (`ANTHROPIC_API_KEY` kerak; bo'lmasa sayt «hozircha yoqilmagan» deydi)
+- **AI gid** har bir bitik sahifasida: *Oddiy tilda · Bolalar uchun · Ilmiy tahlil · Savol bering* (suhbat).
+  Javob faqat katalog ma'lumotiga tayanadi, keshlanadi (bir xil savolga qayta pul ketmaydi).
+- **Rasmdan aniqlash** (`/uz/aniqlash`): tashrif buyuruvchi yozuvni suratga oladi → AI o'qiydi → katalogdan mos
+  bitiklar (yaqin atrofdagilar ustun) chiqadi.
+- Limit (IP bo'yicha): AI gid 30/soat, aniqlash 15/soat — `REST_FRAMEWORK.DEFAULT_THROTTLE_RATES`.
+- **Ovoz bilan tinglash** — tarjima va AI javobini brauzerning o'z ovozi o'qiydi (bepul).
+
+**Qulayliklar**
+- ☆ **Saqlash** va **yaqinda ko'rilganlar** (`/uz/saqlanganlar`, ro'yxatdan o'tmasdan, qurilmada saqlanadi).
+- **A− / A+** — matn o'lchami (asl yozuv, tarjima, izoh), eslab qolinadi.
+- Saytni telefonga **ilova kabi o'rnatish** (PWA manifest, «Bosh ekranga qo'shish»).
+
+## 5-bosqich: ilmiy bo'limlar, gid, o'yin, AI tarjima, import
+
+**Ilmiy bo'limlar**
+| Bo'lim | Sahifa | Admin |
+|---|---|---|
+| Shaxslar (xattot, usta, homiy, hukmdor) | `/uz/shaxslar` | Shaxslar; bitik formasida «Aloqador shaxslar» |
+| Qur'on oyatlari ko'rsatkichi | `/uz/oyatlar` | Bitik → «Qur'on oyatlari»: `2:255; 55:26-27; 112` |
+| Vaqt chizig'i (sulolalar) | `/uz/davrlar` | Bitik → «Davr / sulola» |
+| Atamalar lug'ati (30 ta tayyor atama) | `/uz/lugat`; bitik sahifasida uslub/texnika ustida izoh ⓘ | Atamalar lug'ati |
+| Ikki bitikni taqqoslash | `/uz/taqqoslash` (bitik sahifasida ⇄) | — |
+
+**Tashrif buyuruvchilar uchun**
+- **Gid rejimi** (`/uz/yonalishlar/<slug>/gid`): kompas strelkasi va masofa, 60 m ga yetganda bekat avtomatik
+  ochiladi (obida tavsifi ovozli, bitiklar ro'yxati), ekran o'chmaydi, qayerda qolgani eslab qolinadi.
+- **Bitik ovchisi** (`/uz/ovchi`): obida yonida «Men shu yerdaman» (GPS 150 m) → to'plam va nishonlar.
+- **Viktorina** (`/uz/viktorina`): katalogdan avtomatik tuziladi, AI xarajatisiz.
+- **Oflayn rejim**: service worker; yo'nalish sahifasida «Internetsiz ko'rish uchun saqlash».
+- **Boshqa tillar**: bitik tarjimasini 16 tilda o'qish (turk, qozoq, arab, nemis, xitoy…) — AI, keshlanadi.
+- **Rasm yuborish**: tashrifchi rasm yuboradi → Admin → «Tashrifchilar rasmlari» → «Qabul qilish» → galereyaga.
+- Header'da «Ko'proq» menyusi, telefonda pastki menyuda «Ko'proq» → `/uz/kashf` (barcha bo'limlar).
+
+**Muharrirlar uchun**
+- **AI tarjima qoralamasi**: Admin → Bitiklar → belgilang → «AI: bo'sh tarjimalarni to'ldirish» (yoki bitik
+  sahifasidagi tugma). Faqat bo'sh maydonlar to'ldiriladi, «Muharrir izohi»ga belgi qo'yiladi — tekshirish shart.
+- **Excel'dan import**: Admin → yon menyu «Excel'dan import» → namuna faylni yuklab oling → to'ldiring →
+  avval «Sinov rejimi» bilan yuklang → xatosiz bo'lsa, haqiqiy import. CSV ham qabul qilinadi.
+
 ## Keyingi bosqichlar
 
 - [ ] Haqiqiy bitiklarni mutaxassislar bilan kiritish, demo yozuvlarni o'chirish
