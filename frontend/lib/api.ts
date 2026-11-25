@@ -16,6 +16,7 @@ export type MonumentBrief = {
 };
 export type Monument = MonumentBrief & {
   period: string; century: number | null; cover_url: string | null; inscriptions_count: number;
+  cover_thumb_url?: string | null; cover_original_url?: string | null;
   address?: string; description_uz?: string; description_ru?: string; description_en?: string;
   inscriptions?: InscriptionListItem[];
 };
@@ -24,7 +25,7 @@ export type InscriptionListItem = {
   id: number; slug: string; title_uz: string; title_ru: string; title_en: string;
   language: string; script: string; technique: string; period_text: string;
   year_from: number | null; year_to: number | null; monument: MonumentBrief;
-  image_url: string | null; lat: string; lng: string; original_text: string; status: string;
+  image_url: string | null; lat: string; lng: string; original_text: string; status: string; dynasty?: string;
 };
 
 export type Inscription = Omit<InscriptionListItem, "monument" | "image_url"> & {
@@ -38,6 +39,10 @@ export type Inscription = Omit<InscriptionListItem, "monument" | "image_url"> & 
   hijri_date: string; calligrapher: string; views_count: number; published_at: string | null;
   submitted_by_name: string | null;
   audio_url: string | null; audio_caption: string;
+  dynasty: string; dynasty_label: string; quran_refs: string;
+  quran: QuranRef[];
+  persons: PersonBrief[];
+  terms: Record<string, TermText>;
   updated_at: string; created_at: string;
   latitude: string | null; longitude: string | null;
   related: { slug: string; title_uz: string; title_ru: string; title_en: string; language: string }[];
@@ -46,6 +51,7 @@ export type Inscription = Omit<InscriptionListItem, "monument" | "image_url"> & 
 export type Annotation = { x: number; y: number; w: number; h: number; label: string };
 export type InscriptionImage = {
   id: number; url: string; caption: string; credit: string; is_primary: boolean; annotations?: Annotation[];
+  thumb_url?: string; original_url?: string; width?: number | null; height?: number | null;
 };
 
 /** /api/inscriptions/geojson/ — jonli xarita uchun */
@@ -100,3 +106,23 @@ export function qs(params: Record<string, string | number | undefined | null>): 
   const s = p.toString();
   return s ? `?${s}` : "";
 }
+
+export type QuranRef = { surah: number; from: number | null; to: number | null; name: string; name_ar: string; label: string };
+export type PersonBrief = { slug: string; name_uz: string; name_ru: string; name_en: string; role: string; years: string };
+export type Person = PersonBrief & {
+  id: number; name_original: string; role_label: string; year_from: number | null; year_to: number | null;
+  bio_uz: string; bio_ru: string; bio_en: string; portrait_url: string | null; inscriptions_count: number;
+  inscriptions?: InscriptionListItem[];
+};
+export type TermText = { term_uz: string; term_ru: string; term_en: string; definition_uz: string; definition_ru: string; definition_en: string };
+export type Term = TermText & { key: string; group: string; group_label: string; term_original: string };
+
+/** Ko'rsatkich va vaqt chizig'i uchun qisqa bitik */
+export type BriefIns = {
+  slug: string; title_uz: string; title_ru: string; title_en: string;
+  monument_uz: string; monument_ru: string; monument_en: string; monument_slug: string; city: string;
+  language: string; script: string; year_from: number | null; year_to: number | null; period_text: string;
+  dynasty: string; original_text: string;
+};
+export type QuranIndex = { total: number; surahs: { surah: number; name: string; name_ar: string; ayahs: number; items: (BriefIns & { ref: string })[] }[] };
+export type Timeline = { groups: { dynasty: string; label: string; items: BriefIns[] }[] };

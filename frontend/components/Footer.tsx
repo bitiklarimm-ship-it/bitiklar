@@ -19,6 +19,9 @@ export default function Footer({ lang, d }: { lang: Locale; d: Dict }) {
             <p><Link href={`/${lang}/yonalishlar`}>{d.nav.routes}</Link></p>
           </div>
           <div>
+            <p><Link href={`/${lang}/kashf`}>{d.explore.title}</Link></p>
+            <p><Link href={`/${lang}/shaxslar`}>{d.persons.title}</Link> · <Link href={`/${lang}/oyatlar`}>{d.quran.short}</Link></p>
+            <p><Link href={`/${lang}/davrlar`}>{d.timeline.title}</Link> · <Link href={`/${lang}/lugat`}>{d.glossary.title}</Link></p>
             <p><Link href={`/${lang}/tadqiqotchilar`}>{d.nav.research}</Link></p>
             <p><Link href={`/${lang}/haqida`}>{d.nav.about}</Link></p>
             <p>{d.exportData.title}: <a href={`${PUBLIC_API}/api/export/csv/`}>CSV</a> · <a href={`${PUBLIC_API}/api/export/json/`}>JSON</a> · <a href={`${PUBLIC_API}/api/export/tei/`}>TEI</a></p>

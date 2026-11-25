@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import MapLoader from "@/components/MapLoader";
+import OfflineSave from "@/components/OfflineSave";
 import { apiGet, type Route } from "@/lib/api";
 import { getDict, label, pick, type Locale } from "@/lib/i18n";
 
@@ -77,9 +78,21 @@ export default async function RoutePage({ params }: P) {
             <MapLoader className="map-wrap route-map" points={points} line />
           </div>
           {first && (
-            <Link href={`/${lang}/xarita`} className="btn btn-dark" style={{ width: "100%", justifyContent: "center" }}>
-              📍 {d.routes.start}
-            </Link>
+            <div className="route-actions">
+              <Link href={`/${lang}/yonalishlar/${r.slug}/gid`} className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+                🧭 {d.guide.start}
+              </Link>
+              <OfflineSave
+                urls={[
+                  `/${lang}/yonalishlar/${r.slug}`, `/${lang}/yonalishlar/${r.slug}/gid`,
+                  ...stops.map((s) => `/${lang}/obidalar/${s.monument.slug}`),
+                ]}
+                apiPaths={stops.map((s) => `/monuments/${s.monument.slug}/`)}
+              />
+              <Link href={`/${lang}/xarita`} className="btn btn-outline" style={{ width: "100%", justifyContent: "center" }}>
+                📍 {d.routes.start}
+              </Link>
+            </div>
           )}
         </aside>
       </div>

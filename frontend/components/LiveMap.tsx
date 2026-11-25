@@ -4,10 +4,13 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Circle, LayersControl, MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { Circle, MapContainer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import type { InscriptionFeature, MonumentFeature } from "@/lib/api";
 import { arrow, bearing, directionsUrl, distance, formatDistance } from "@/lib/geo";
 import { label, pick, type Dict, type Locale } from "@/lib/i18n";
+import { MAX_ZOOM } from "@/lib/tiles";
+import BaseLayers from "./BaseLayers";
+import FullscreenButton from "./FullscreenButton";
 
 type Pos = { lat: number; lng: number; acc: number };
 type Item = { f: InscriptionFeature; lat: number; lng: number };
@@ -194,6 +197,7 @@ export default function LiveMap({
         <label className="chk">
           <input type="checkbox" checked={showMonuments} onChange={(e) => setShowMonuments(e.target.checked)} /> {t.layerMonuments}
         </label>
+        <Link href={`/${lang}/aniqlash`} className="btn btn-outline btn-sm">📷 {d.identify.title}</Link>
         {pos && <span className="muted live-acc">{t.accuracy} ±{Math.round(pos.acc)} m</span>}
       </div>
       {msg && <div className={`alert ${msg === t.locating ? "warn" : "err"}`}>{msg}</div>}
@@ -207,23 +211,9 @@ export default function LiveMap({
 
       <div className="live-grid">
         <div className="map-wrap live-map">
-          <MapContainer center={UZ} zoom={6} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
-            <LayersControl position="topright">
-              <LayersControl.BaseLayer checked name={t.scheme}>
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  maxZoom={19}
-                />
-              </LayersControl.BaseLayer>
-              <LayersControl.BaseLayer name={t.satellite}>
-                <TileLayer
-                  attribution="Tiles &copy; Esri"
-                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                  maxZoom={19}
-                />
-              </LayersControl.BaseLayer>
-            </LayersControl>
+          <MapContainer center={UZ} zoom={6} maxZoom={MAX_ZOOM} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
+            <BaseLayers labels={d.mapx} initial="hybrid" />
+            <FullscreenButton label={d.mapx.fullscreen} />
             <MapBridge onMap={onMap} onMove={onMove} />
 
             {showMonuments && monuments.map((m) => (

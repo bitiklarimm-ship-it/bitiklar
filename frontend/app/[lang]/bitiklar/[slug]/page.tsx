@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import AiGuide from "@/components/AiGuide";
 import CitationBox from "@/components/CitationBox";
+import ReadAloud from "@/components/ReadAloud";
+import ReaderTools from "@/components/ReaderTools";
+import CompareButton from "@/components/CompareButton";
+import MoreLanguages from "@/components/MoreLanguages";
+import PhotoSubmit from "@/components/PhotoSubmit";
 import Gallery from "@/components/Gallery";
 import JsonLd, { SITE } from "@/components/JsonLd";
+import Map3DButton from "@/components/Map3DButton";
 import MapLoader from "@/components/MapLoader";
 import ShareBar from "@/components/ShareBar";
 import { apiGet, PUBLIC_API, type Inscription } from "@/lib/api";
@@ -48,6 +55,12 @@ export default async function InscriptionPage({ params }: P) {
   const names: Record<Locale, string> = { uz: "O'ZBEKCHA", ru: "РУССКИЙ", en: "ENGLISH" };
   const commentary = pick(it, "commentary", lang);
   const placement = pick(it, "placement", lang);
+  // Lug'atdagi izoh bo'lsa — atama ustiga borilganda qisqa izoh, bosilganda lug'at sahifasi
+  const termLink = (key: string, text: string) => {
+    const tr = it.terms?.[key];
+    if (!tr) return text;
+    return <Link href={`/${lang}/lugat#${key}`} className="term" title={pick(tr, "definition", lang)}>{text} ⓘ</Link>;
+  };
   const permalink = `${SITE}/${lang}/bitiklar/${it.slug}`;
   const year = new Date(it.published_at || it.updated_at || Date.now()).getFullYear();
   const jsonLd = {
@@ -95,11 +108,18 @@ export default async function InscriptionPage({ params }: P) {
             {it.script !== "other" && <span className="tag">{label(d, "script", it.script)}</span>}
             {it.technique !== "other" && <span className="tag">{label(d, "technique", it.technique)}</span>}
           </div>
-          <ShareBar
-            title={pick(it, "title", lang)}
-            text={it.original_text}
-            labels={{ share: d.ui.share, linkCopied: d.ui.linkCopied, copyText: d.ui.copyText, copied: d.ui.copied }}
-          />
+          <div className="head-tools">
+            <ReaderTools item={{
+              slug: it.slug, title_uz: it.title_uz, title_ru: it.title_ru, title_en: it.title_en,
+              monument_uz: it.monument.name_uz, monument_ru: it.monument.name_ru, monument_en: it.monument.name_en,
+              image: it.images[0]?.thumb_url || it.images[0]?.url || null,
+            }} />
+            <ShareBar
+              title={pick(it, "title", lang)}
+              text={it.original_text}
+              labels={{ share: d.ui.share, linkCopied: d.ui.linkCopied, copyText: d.ui.copyText, copied: d.ui.copied }}
+            />
+          </div>
         </div>
       </section>
 
@@ -136,7 +156,10 @@ export default async function InscriptionPage({ params }: P) {
           )}
 
           <div className="block">
-            <h2>{t.translations}</h2>
+            <div className="block-head">
+              <h2>{t.translations}</h2>
+              <ReadAloud text={pick(it, "translation", lang)} lang={lang} labels={d.speech} />
+            </div>
             {order.map((l) => {
               const text = (it as any)[`translation_${l}`] as string;
               return text ? (
@@ -146,7 +169,10 @@ export default async function InscriptionPage({ params }: P) {
                 </div>
               ) : null;
             })}
+            <MoreLanguages slug={it.slug} />
           </div>
+
+          <AiGuide slug={it.slug} />
 
           {commentary && (
             <div className="block">
@@ -176,11 +202,27 @@ export default async function InscriptionPage({ params }: P) {
               <div><dt>{t.monument}</dt><dd><Link href={`/${lang}/obidalar/${it.monument.slug}`}>{pick(it.monument, "name", lang)}</Link></dd></div>
               {placement && <div><dt>{t.placement}</dt><dd>{placement}</dd></div>}
               <div><dt>{t.language}</dt><dd>{label(d, "language", it.language)}</dd></div>
-              <div><dt>{t.script}</dt><dd>{label(d, "script", it.script)}</dd></div>
-              <div><dt>{t.technique}</dt><dd>{label(d, "technique", it.technique)}</dd></div>
+              <div><dt>{t.script}</dt><dd>{termLink(it.script, label(d, "script", it.script))}</dd></div>
+              <div><dt>{t.technique}</dt><dd>{termLink(it.technique, label(d, "technique", it.technique))}</dd></div>
               <div><dt>{t.period}</dt><dd>{it.period_text || (it.year_from ? `${it.year_from}${it.year_to ? `–${it.year_to}` : ""}` : t.unknown)}</dd></div>
+              {it.dynasty && <div><dt>{d.timeline.dynasty}</dt><dd><Link href={`/${lang}/davrlar#d-${it.dynasty}`}>{label(d, "dynasty", it.dynasty)}</Link></dd></div>}
               {it.hijri_date && <div><dt>{t.hijri}</dt><dd>{it.hijri_date}</dd></div>}
               <div><dt>{t.calligrapher}</dt><dd>{it.calligrapher || t.unknown}</dd></div>
+              {!!it.persons?.length && (
+                <div><dt>{d.persons.title}</dt><dd>
+                  {it.persons.map((p, k) => (
+                    <span key={p.slug}>{k > 0 && ", "}<Link href={`/${lang}/shaxslar/${p.slug}`}>{pick(p, "name", lang)}</Link>
+                      <small className="muted"> ({label(d, "role", p.role)})</small></span>
+                  ))}
+                </dd></div>
+              )}
+              {!!it.quran?.length && (
+                <div><dt>{d.quran.short}</dt><dd>
+                  {it.quran.map((q, k) => (
+                    <span key={k}>{k > 0 && "; "}<Link href={`/${lang}/oyatlar#sura-${q.surah}`}>{q.label}</Link></span>
+                  ))}
+                </dd></div>
+              )}
               <div><dt>{t.gps}</dt><dd>{lat.toFixed(5)}, {lng.toFixed(5)}<br />
                 <a href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=18/${lat}/${lng}`} target="_blank" rel="noopener noreferrer">{t.openMap} ↗</a></dd></div>
             </dl>
@@ -188,9 +230,10 @@ export default async function InscriptionPage({ params }: P) {
 
           <div className="block">
             <MapLoader className="map-mini" points={[{ lat, lng, title: pick(it.monument, "name", lang) }]} />
-            <Link href={`/${lang}/xarita?bitik=${it.slug}`} className="btn btn-outline btn-sm" style={{ marginTop: 10 }}>
-              📍 {d.live.title}
-            </Link>
+            <div className="map-actions">
+              <Map3DButton lat={lat} lng={lng} title={pick(it.monument, "name", lang)} />
+              <Link href={`/${lang}/xarita?bitik=${it.slug}`} className="btn btn-outline btn-sm">📍 {d.live.title}</Link>
+            </div>
           </div>
 
           <div className="card card-body block">
@@ -220,6 +263,11 @@ export default async function InscriptionPage({ params }: P) {
             <a className="btn btn-outline btn-sm" href={`${PUBLIC_API}/api/inscriptions/${it.slug}/tei/`} download={`bitiklar-${it.slug}.xml`}>
               ⬇ {d.exportData.teiOne}
             </a>
+          </div>
+
+          <div className="aside-actions">
+            <CompareButton slug={it.slug} />
+            <PhotoSubmit inscription={it.slug} />
           </div>
 
           <Link href={`/${lang}/tadqiqotchilar?bitik=${it.slug}`} className="btn btn-dark" style={{ width: "100%", justifyContent: "center" }}>

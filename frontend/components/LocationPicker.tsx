@@ -3,7 +3,10 @@
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useEffect, useState } from "react";
-import { CircleMarker, LayersControl, MapContainer, Marker, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import { CircleMarker, MapContainer, Marker, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import { MAX_ZOOM } from "@/lib/tiles";
+import { useDict } from "@/lib/useDict";
+import BaseLayers from "./BaseLayers";
 
 type LatLng = { lat: number; lng: number };
 type Labels = { myLocation: string; clear: string; satellite: string; scheme: string; denied: string; unavailable: string };
@@ -35,6 +38,7 @@ export default function LocationPicker({
   value: LatLng | null; onChange: (v: LatLng | null) => void;
   reference: LatLng | null; referenceLabel: string; labels: Labels;
 }) {
+  const d = useDict();
   const [target, setTarget] = useState<LatLng | null>(value || reference);
   const [msg, setMsg] = useState("");
 
@@ -68,15 +72,8 @@ export default function LocationPicker({
         {msg && <span className="muted" style={{ fontSize: ".85rem" }}>{msg}</span>}
       </div>
       <div className="map-mini" style={{ height: 320 }}>
-        <MapContainer center={center} zoom={value || reference ? 17 : 6} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
-          <LayersControl position="topright">
-            <LayersControl.BaseLayer checked name={labels.scheme}>
-              <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19} />
-            </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer name={labels.satellite}>
-              <TileLayer attribution="Tiles &copy; Esri" url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={19} />
-            </LayersControl.BaseLayer>
-          </LayersControl>
+        <MapContainer center={center} zoom={value || reference ? 18 : 6} maxZoom={MAX_ZOOM} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
+          <BaseLayers labels={d.mapx} initial="hybrid" />
           <ClickHandler onPick={(p) => onChange(p)} />
           <Recenter target={target} />
           {reference && (

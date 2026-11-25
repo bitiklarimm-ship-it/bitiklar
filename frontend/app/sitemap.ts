@@ -11,7 +11,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     apiGet<Paginated<Monument>>("/monuments/?page_size=200", 3600),
     apiGet<Route[]>("/routes/", 3600),
   ]);
-  const pages = ["", "/bitiklar", "/obidalar", "/xarita", "/yonalishlar", "/haqida"];
+  const pages = ["", "/bitiklar", "/obidalar", "/xarita", "/yonalishlar", "/haqida", "/aniqlash", "/shaxslar",
+    "/oyatlar", "/davrlar", "/lugat", "/viktorina", "/ovchi", "/kashf"];
   const out: MetadataRoute.Sitemap = [];
   for (const l of LOCALES) {
     pages.forEach((p) => out.push({ url: `${site}/${l}${p}` }));

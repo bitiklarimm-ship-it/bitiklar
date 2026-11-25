@@ -62,6 +62,14 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
               </span>
               <span className="near-cta-go" aria-hidden="true">→</span>
             </Link>
+            <Link href={`/${lang}/aniqlash`} className="near-cta near-cta-alt">
+              <span className="near-cta-icon" aria-hidden="true">📷</span>
+              <span>
+                <b>{d.identify.title}</b>
+                <small>{d.identify.short}</small>
+              </span>
+              <span className="near-cta-go" aria-hidden="true">→</span>
+            </Link>
             {stats && (
               <div className="stats">
                 <div className="stat"><b>{stats.inscriptions}</b><span>{d.home.stats.inscriptions}</span></div>

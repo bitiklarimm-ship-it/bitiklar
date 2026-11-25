@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { InscriptionImage } from "@/lib/api";
+import { useDict } from "@/lib/useDict";
+import Lightbox from "./Lightbox";
 
 type Labels = { noImage: string; show: string; hide: string };
 
@@ -9,6 +11,8 @@ export default function Gallery({ images, fallbackText, labels }: { images: Insc
   const [i, setI] = useState(0);
   const [showAnn, setShowAnn] = useState(true);
   const [hover, setHover] = useState<number | null>(null);
+  const [lb, setLb] = useState(false);
+  const d = useDict();
   if (!images.length) {
     return (
       <div className="card">
@@ -27,7 +31,14 @@ export default function Gallery({ images, fallbackText, labels }: { images: Insc
       <div className={`gallery-main ${ann.length ? "has-ann" : ""}`}>
         <div className="ann-stage">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={cur.url} alt={cur.caption || ""} />
+          <img
+            src={cur.url}
+            alt={cur.caption || ""}
+            onClick={() => setLb(true)}
+            style={{ cursor: "zoom-in" }}
+            title={d.img.open}
+          />
+          <button className="zoom-hint" onClick={() => setLb(true)} aria-label={d.img.open}>⤢ {d.img.open}</button>
           {showAnn && ann.map((a, k) => (
             <div
               key={k}
@@ -63,12 +74,20 @@ export default function Gallery({ images, fallbackText, labels }: { images: Insc
           )}
         </div>
       )}
+      {lb && (
+        <Lightbox
+          images={images.map((im) => ({ url: im.url, original: im.original_url, caption: im.caption, credit: im.credit }))}
+          start={Math.min(i, images.length - 1)}
+          onClose={() => setLb(false)}
+          labels={{ close: d.ui.close, original: d.img.original, zoomIn: d.img.zoomIn, zoomOut: d.img.zoomOut, reset: d.img.reset, prev: d.catalog.prev, next: d.catalog.next }}
+        />
+      )}
       {images.length > 1 && (
         <div className="thumbs">
           {images.map((im, k) => (
             <button key={im.id} className={k === i ? "active" : ""} onClick={() => setI(k)} aria-label={`${k + 1}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={im.url} alt="" />
+              <img src={im.thumb_url || im.url} alt="" loading="lazy" />
             </button>
           ))}
         </div>

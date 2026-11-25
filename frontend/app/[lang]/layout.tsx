@@ -5,6 +5,7 @@ import BackToTop from "@/components/BackToTop";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import MobileTabBar from "@/components/MobileTabBar";
+import SWRegister from "@/components/SWRegister";
 import { getDict, isLocale, LOCALES } from "@/lib/i18n";
 import "../globals.css";
 
@@ -59,6 +60,7 @@ export default async function LangLayout({ children, params }: { children: React
         <Footer lang={lang} d={d} />
         <MobileTabBar lang={lang} d={d} />
         <BackToTop label={d.ui.top} />
+        <SWRegister />
       </body>
     </html>
   );

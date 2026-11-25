@@ -45,7 +45,7 @@ export default async function Monuments({ params, searchParams }: { params: Prom
               <div className="ins-thumb girih">
                 {m.cover_url
                   // eslint-disable-next-line @next/next/no-img-element
-                  ? <img src={m.cover_url} alt={pick(m, "name", lang)} loading="lazy" />
+                  ? <img src={m.cover_thumb_url || m.cover_url} alt={pick(m, "name", lang)} loading="lazy" />
                   : <div className="arabic" style={{ fontSize: "2.4rem" }}>۞</div>}
               </div>
               <div className="card-body">

@@ -24,7 +24,11 @@ export default function Header({ lang, d }: { lang: Locale; d: Dict }) {
   }, []);
 
   // Sahifa almashganda menyular yopiladi
-  useEffect(() => { setOpen(false); setSearchOpen(false); }, [pathname]);
+  useEffect(() => {
+    setOpen(false);
+    setSearchOpen(false);
+    document.querySelectorAll("details.more[open]").forEach((el) => el.removeAttribute("open"));
+  }, [pathname]);
 
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus();
@@ -46,6 +50,16 @@ export default function Header({ lang, d }: { lang: Locale; d: Dict }) {
     { href: `/${lang}/obidalar`, label: d.nav.monuments },
     { href: `/${lang}/xarita`, label: d.nav.map },
     { href: `/${lang}/yonalishlar`, label: d.nav.routes },
+    { href: `/${lang}/aniqlash`, label: `📷 ${d.nav.identify}` },
+  ];
+  const more = [
+    { href: `/${lang}/shaxslar`, label: d.persons.title },
+    { href: `/${lang}/oyatlar`, label: d.quran.title },
+    { href: `/${lang}/davrlar`, label: d.timeline.title },
+    { href: `/${lang}/lugat`, label: d.glossary.title },
+    { href: `/${lang}/viktorina`, label: d.quiz.title },
+    { href: `/${lang}/ovchi`, label: d.hunter.title },
+    { href: `/${lang}/taqqoslash`, label: d.compare.title },
     { href: `/${lang}/tadqiqotchilar`, label: d.nav.research },
     { href: `/${lang}/haqida`, label: d.nav.about },
   ];
@@ -62,11 +76,21 @@ export default function Header({ lang, d }: { lang: Locale; d: Dict }) {
               {l.label}
             </Link>
           ))}
+          <details className="more">
+            <summary className={more.some((m) => pathname.startsWith(m.href)) ? "active" : ""}>{d.ui.more} ▾</summary>
+            <div className="more-menu">
+              {more.map((l) => (
+                <Link key={l.href} href={l.href} className={pathname.startsWith(l.href) ? "active" : ""}>{l.label}</Link>
+              ))}
+              <Link href={`/${lang}/kashf`} className="more-all">{d.explore.title} →</Link>
+            </div>
+          </details>
         </nav>
         <div className="header-tools">
           <button className="icon-btn" aria-label={d.ui.search} title={`${d.ui.search} ( / )`} onClick={() => setSearchOpen(true)}>
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
           </button>
+          <Link href={`/${lang}/saqlanganlar`} className="icon-btn" aria-label={d.saved.title} title={d.saved.title}>☆</Link>
           <ThemeToggle labels={{ light: d.ui.light, dark: d.ui.dark }} />
           <div className="lang" role="group" aria-label="Til / Язык / Language">
             {LOCALES.map((l) => (
