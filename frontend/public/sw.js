@@ -3,13 +3,13 @@
  * - /_next/static (o'zgarmas fayllar): avval kesh.
  * - Xarita plitkalari va rasmlar: avval kesh (cheklangan hajmda).
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const PAGES = `bitiklar-pages-${VERSION}`;
 const STATIC = `bitiklar-static-${VERSION}`;
 const TILES = `bitiklar-tiles-${VERSION}`;
 const IMAGES = `bitiklar-img-${VERSION}`;
 const LIMITS = { [TILES]: 1500, [IMAGES]: 400, [PAGES]: 300 };
-const TILE_HOSTS = ["server.arcgisonline.com", "basemaps.cartocdn.com", "tile.opentopomap.org"];
+const TILE_HOSTS = ["server.arcgisonline.com", "tile.openstreetmap.org", "basemaps.cartocdn.com"];
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => {
