@@ -29,7 +29,7 @@ if [ "${BACKUP_INTERVAL_HOURS:-24}" != "0" ]; then
 fi
 
 # --- Self-ping: Render'ning bepul tarifida 15 daqiqa so'rov bo'lmasa servis uxlaydi. ---
-# Har KEEP_ALIVE_MINUTES (standart 10) daqiqada saytning tashqi manziliga so'rov yuboriladi.
+# Har KEEP_ALIVE_MINUTES (standart 8) daqiqada saytning tashqi manziliga so'rov yuboriladi.
 # O'chirish: KEEP_ALIVE=0. Manzil: SELF_PING_URL yoki Render bergan RENDER_EXTERNAL_URL.
 PING_URL="${SELF_PING_URL:-$RENDER_EXTERNAL_URL}"
 if [ "${KEEP_ALIVE:-1}" != "0" ] && [ -n "$PING_URL" ]; then
@@ -45,10 +45,10 @@ try:
 except Exception as e:
     print(f"[keep-alive] xato: {e}", flush=True)
 PY
-      sleep $(( ${KEEP_ALIVE_MINUTES:-10} * 60 ))
+      sleep $(( ${KEEP_ALIVE_MINUTES:-8} * 60 ))
     done
   ) &
-  echo "Keep-alive yoqildi: $PING_URL har ${KEEP_ALIVE_MINUTES:-10} daqiqada"
+  echo "Keep-alive yoqildi: $PING_URL har ${KEEP_ALIVE_MINUTES:-8} daqiqada"
 fi
 
 gunicorn config.wsgi:application \
