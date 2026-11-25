@@ -84,13 +84,18 @@
       var L = window.L;
       // Standart: sun'iy yo'ldosh + joy nomlari (gibrid) — binoning qaysi qismida ekanini aniq ko'rish uchun
       // Esri O'zbekistonda 18-darajagacha tasvir beradi; undan yaqinda shu tasvir kattalashtiriladi
-      var esri = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-      var carto = "https://{s}.basemaps.cartocdn.com/rastertiles/";
+      // Hammasi API kalitsiz: Esri tasvir + Esri nomlar, ko'cha xaritasi — OpenStreetMap
+      var esriBase = "https://server.arcgisonline.com/ArcGIS/rest/services/";
+      var esri = esriBase + "World_Imagery/MapServer/tile/{z}/{y}/{x}";
       var satOpts = { maxZoom: 20, maxNativeZoom: 18, attribution: "Tasvirlar &copy; Esri, Maxar" };
-      var cartoOpts = { maxZoom: 20, maxNativeZoom: 19, subdomains: "abcd", attribution: "&copy; OpenStreetMap &copy; CARTO" };
-      var hybrid = L.layerGroup([L.tileLayer(esri, satOpts), L.tileLayer(carto + "voyager_only_labels/{z}/{x}/{y}{r}.png", cartoOpts)]);
+      var labelOpts = { maxZoom: 20, maxNativeZoom: 18 };
+      var hybrid = L.layerGroup([
+        L.tileLayer(esri, satOpts),
+        L.tileLayer(esriBase + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", labelOpts)
+      ]);
       var satOnly = L.tileLayer(esri, satOpts);
-      var street = L.tileLayer(carto + "voyager/{z}/{x}/{y}{r}.png", cartoOpts);
+      var street = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        { maxZoom: 20, maxNativeZoom: 19, attribution: "&copy; OpenStreetMap" });
       var map = L.map(mapDiv, { layers: [hybrid], maxZoom: 20 }).setView(UZ_CENTER, 6);
       L.control.layers({ "Sun'iy yo'ldosh + nomlar": hybrid, "Sun'iy yo'ldosh": satOnly, "Xarita": street }).addTo(map);
 
