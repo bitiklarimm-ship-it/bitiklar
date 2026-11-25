@@ -26,6 +26,9 @@ server {
     gzip on;
     gzip_types text/css application/javascript application/json image/svg+xml;
 
+    # Tezkor tekshiruv (keep-alive, UptimeRobot) — ilovalarga yuk tushirmaydi
+    location = /healthz { access_log off; default_type text/plain; return 200 "ok"; }
+
     # Django: API, admin panel, admin statikasi, media
     location /api/    { proxy_pass http://django; }
     location /admin   { proxy_pass http://django; }
