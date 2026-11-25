@@ -83,19 +83,16 @@
     loadLeaflet(function () {
       var L = window.L;
       // Standart: sun'iy yo'ldosh + joy nomlari (gibrid) — binoning qaysi qismida ekanini aniq ko'rish uchun
-      var opts = { maxZoom: 21, maxNativeZoom: 19 };
-      var esri = "https://server.arcgisonline.com/ArcGIS/rest/services/";
-      var sat = L.tileLayer(esri + "World_Imagery/MapServer/tile/{z}/{y}/{x}", Object.assign({ attribution: "Tasvirlar &copy; Esri, Maxar" }, opts));
-      var places = L.tileLayer(esri + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", opts);
-      var roads = L.tileLayer(esri + "Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", Object.assign({ opacity: 0.7 }, opts));
-      var hybrid = L.layerGroup([sat, roads, places]);
-      var satOnly = L.tileLayer(esri + "World_Imagery/MapServer/tile/{z}/{y}/{x}", Object.assign({ attribution: "Tasvirlar &copy; Esri, Maxar" }, opts));
-      var street = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-        maxZoom: 21, maxNativeZoom: 20, subdomains: "abcd",
-        attribution: "&copy; OpenStreetMap &copy; CARTO",
-      });
-      var map = L.map(mapDiv, { layers: [hybrid], maxZoom: 21 }).setView(UZ_CENTER, 6);
-      L.control.layers({ "Sun'iy yo'ldosh (gibrid)": hybrid, "Sun'iy yo'ldosh": satOnly, "Xarita": street }).addTo(map);
+      // Esri O'zbekistonda 18-darajagacha tasvir beradi; undan yaqinda shu tasvir kattalashtiriladi
+      var esri = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+      var carto = "https://{s}.basemaps.cartocdn.com/rastertiles/";
+      var satOpts = { maxZoom: 20, maxNativeZoom: 18, attribution: "Tasvirlar &copy; Esri, Maxar" };
+      var cartoOpts = { maxZoom: 20, maxNativeZoom: 19, subdomains: "abcd", attribution: "&copy; OpenStreetMap &copy; CARTO" };
+      var hybrid = L.layerGroup([L.tileLayer(esri, satOpts), L.tileLayer(carto + "voyager_only_labels/{z}/{x}/{y}{r}.png", cartoOpts)]);
+      var satOnly = L.tileLayer(esri, satOpts);
+      var street = L.tileLayer(carto + "voyager/{z}/{x}/{y}{r}.png", cartoOpts);
+      var map = L.map(mapDiv, { layers: [hybrid], maxZoom: 20 }).setView(UZ_CENTER, 6);
+      L.control.layers({ "Sun'iy yo'ldosh + nomlar": hybrid, "Sun'iy yo'ldosh": satOnly, "Xarita": street }).addTo(map);
 
       var marker = null;
       var monumentMarker = null;
