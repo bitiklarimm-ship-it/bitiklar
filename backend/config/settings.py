@@ -213,6 +213,10 @@ CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 AI_MODEL = os.environ.get("AI_MODEL", "claude-sonnet-5-5")
 
+# OpenStreetMap xarita plitkalari Referer sarlavhasini talab qiladi (aks holda "Access blocked / 403").
+# Django standarti "same-origin" uni boshqa saytlarga yubormaydi — shuning uchun faqat domen nomi yuboriladi.
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
