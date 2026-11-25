@@ -28,29 +28,6 @@ if [ "${BACKUP_INTERVAL_HOURS:-24}" != "0" ]; then
   BACKUP_PID=$!
 fi
 
-# --- Self-ping: Render'ning bepul tarifida 15 daqiqa so'rov bo'lmasa servis uxlaydi. ---
-# Har KEEP_ALIVE_MINUTES (standart 8) daqiqada saytning tashqi manziliga so'rov yuboriladi.
-# O'chirish: KEEP_ALIVE=0. Manzil: SELF_PING_URL yoki Render bergan RENDER_EXTERNAL_URL.
-PING_URL="${SELF_PING_URL:-$RENDER_EXTERNAL_URL}"
-if [ "${KEEP_ALIVE:-1}" != "0" ] && [ -n "$PING_URL" ]; then
-  (
-    sleep 120
-    while true; do
-      python - "$PING_URL" <<'PY' || true
-import sys, urllib.request
-url = sys.argv[1].rstrip("/") + "/healthz"
-try:
-    with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "bitiklar-keepalive"}), timeout=30) as r:
-        print(f"[keep-alive] {url} -> {r.status}", flush=True)
-except Exception as e:
-    print(f"[keep-alive] xato: {e}", flush=True)
-PY
-      sleep $(( ${KEEP_ALIVE_MINUTES:-8} * 60 ))
-    done
-  ) &
-  echo "Keep-alive yoqildi: $PING_URL har ${KEEP_ALIVE_MINUTES:-8} daqiqada"
-fi
-
 gunicorn config.wsgi:application \
   --bind 127.0.0.1:8000 \
   --workers "${WEB_CONCURRENCY:-2}" --timeout 180 \

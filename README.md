@@ -263,13 +263,11 @@ git add backend/apps/*/migrations && git commit -m "migratsiyalar"
 ## 4-bosqich: realroq xarita, rasm sifati, AI rejimlari
 
 **Xarita**
-- Qatlamlar: **Xarita** (CARTO), **Sun'iy yo'ldosh** (Esri), **Sun'iy yo'ldosh + nomlar**. Bitta obida xaritasi
-  sun'iy yo'ldoshda ochiladi. Esri tasviri 18-darajadan keyin kattalashtirib ko'rsatiladi. Hammasi kalitsiz.
+- Standart ko'rinish — **sun'iy yo'ldosh (gibrid)**: Esri tasvirlari + joy nomlari va yo'llar, 21-darajagacha
+  kattalashtirish. Qatlamlar: sun'iy yo'ldosh, xarita (CARTO), relyef (OpenTopoMap). Hammasi kalitsiz.
 - **Butun ekran** tugmasi barcha xaritalarda.
-- **Qayerda joylashgan / Qanday borish** (obida va bitik sahifalarida): koordinata (nusxa olish, ulashish),
-  «mendan qancha uzoqda», navigatorlar: Yandex Navigator, Yandex Xaritalar, Google Maps, 2GIS, Apple, Waze, OSM.
-  Jonli xaritada va gid rejimida «Yo'l» tugmasi ham shu ro'yxatni ochadi.
-- Telefonda kichik xaritalar sahifa aylantirishga xalaqit bermaydi (xarita ikki barmoq bilan suriladi).
+- **3D ko'rinish** (obida va bitik sahifalarida): MapLibre — sun'iy yo'ldosh + relyef (AWS Terrain Tiles) yoki
+  OpenFreeMap 3D binolar; burish, egish, obida atrofida aylanish.
 - Admin paneldagi joy tanlagich ham sun'iy yo'ldoshda ochiladi.
 
 **Rasmlar**

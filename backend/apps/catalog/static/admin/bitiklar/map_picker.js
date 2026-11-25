@@ -83,21 +83,19 @@
     loadLeaflet(function () {
       var L = window.L;
       // Standart: sun'iy yo'ldosh + joy nomlari (gibrid) — binoning qaysi qismida ekanini aniq ko'rish uchun
-      // Esri O'zbekistonda 18-darajagacha tasvir beradi; undan yaqinda shu tasvir kattalashtiriladi
-      // Hammasi API kalitsiz: Esri tasvir + Esri nomlar, ko'cha xaritasi — OpenStreetMap
-      var esriBase = "https://server.arcgisonline.com/ArcGIS/rest/services/";
-      var esri = esriBase + "World_Imagery/MapServer/tile/{z}/{y}/{x}";
-      var satOpts = { maxZoom: 20, maxNativeZoom: 18, attribution: "Tasvirlar &copy; Esri, Maxar" };
-      var labelOpts = { maxZoom: 20, maxNativeZoom: 18 };
-      var hybrid = L.layerGroup([
-        L.tileLayer(esri, satOpts),
-        L.tileLayer(esriBase + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", labelOpts)
-      ]);
-      var satOnly = L.tileLayer(esri, satOpts);
-      var street = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        { maxZoom: 20, maxNativeZoom: 19, attribution: "&copy; OpenStreetMap" });
-      var map = L.map(mapDiv, { layers: [hybrid], maxZoom: 20 }).setView(UZ_CENTER, 6);
-      L.control.layers({ "Sun'iy yo'ldosh + nomlar": hybrid, "Sun'iy yo'ldosh": satOnly, "Xarita": street }).addTo(map);
+      var opts = { maxZoom: 21, maxNativeZoom: 19 };
+      var esri = "https://server.arcgisonline.com/ArcGIS/rest/services/";
+      var sat = L.tileLayer(esri + "World_Imagery/MapServer/tile/{z}/{y}/{x}", Object.assign({ attribution: "Tasvirlar &copy; Esri, Maxar" }, opts));
+      var places = L.tileLayer(esri + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", opts);
+      var roads = L.tileLayer(esri + "Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", Object.assign({ opacity: 0.7 }, opts));
+      var hybrid = L.layerGroup([sat, roads, places]);
+      var satOnly = L.tileLayer(esri + "World_Imagery/MapServer/tile/{z}/{y}/{x}", Object.assign({ attribution: "Tasvirlar &copy; Esri, Maxar" }, opts));
+      var street = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        maxZoom: 21, maxNativeZoom: 20, subdomains: "abcd",
+        attribution: "&copy; OpenStreetMap &copy; CARTO",
+      });
+      var map = L.map(mapDiv, { layers: [hybrid], maxZoom: 21 }).setView(UZ_CENTER, 6);
+      L.control.layers({ "Sun'iy yo'ldosh (gibrid)": hybrid, "Sun'iy yo'ldosh": satOnly, "Xarita": street }).addTo(map);
 
       var marker = null;
       var monumentMarker = null;
