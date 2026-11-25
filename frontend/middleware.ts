@@ -16,9 +16,12 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const has = LOCALES.some((l) => pathname === `/${l}` || pathname.startsWith(`/${l}/`));
   if (has) return NextResponse.next();
-  const url = req.nextUrl.clone();
-  url.pathname = `/${preferred(req)}${pathname === "/" ? "" : pathname}`;
-  return NextResponse.redirect(url);
+  // Nginx orqasida ishlaganda req.nextUrl ichki manzilni (localhost:3000) ko'rsatadi.
+  // Shuning uchun yo'naltirish manzilini brauzer yuborgan Host sarlavhasidan quramiz.
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || req.nextUrl.host;
+  const proto = (req.headers.get("x-forwarded-proto") || req.nextUrl.protocol.replace(":", "")).split(",")[0].trim();
+  const target = `/${preferred(req)}${pathname === "/" ? "" : pathname}${req.nextUrl.search}`;
+  return NextResponse.redirect(new URL(target, `${proto}://${host}`));
 }
 
 export const config = {
