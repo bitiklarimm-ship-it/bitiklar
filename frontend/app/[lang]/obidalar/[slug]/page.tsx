@@ -5,7 +5,7 @@ import CheckIn from "@/components/CheckIn";
 import InscriptionCard from "@/components/InscriptionCard";
 import PhotoSubmit from "@/components/PhotoSubmit";
 import JsonLd, { SITE } from "@/components/JsonLd";
-import LocationCard from "@/components/LocationCard";
+import Map3DButton from "@/components/Map3DButton";
 import MapLoader from "@/components/MapLoader";
 import { apiGet, PUBLIC_API, type Monument } from "@/lib/api";
 import { getDict, label, LOCALES, pick, type Locale } from "@/lib/i18n";
@@ -89,11 +89,9 @@ export default async function MonumentPage({ params }: P) {
           <div className="block">
             <MapLoader className="map-mini" points={[{ lat, lng, title: pick(m, "name", lang) }]} />
             <div className="map-actions">
+              <Map3DButton lat={lat} lng={lng} title={pick(m, "name", lang)} />
               <Link href={`/${lang}/xarita`} className="btn btn-outline btn-sm">📍 {d.live.title}</Link>
             </div>
-          </div>
-          <div className="block">
-            <LocationCard lat={lat} lng={lng} name={pick(m, "name", lang)} address={m.address || m.city} />
           </div>
           <div className="block">
             <CheckIn monument={{ slug: m.slug, name_uz: m.name_uz, name_ru: m.name_ru, name_en: m.name_en, city: m.city, lat, lng }} />

@@ -10,7 +10,7 @@ import MoreLanguages from "@/components/MoreLanguages";
 import PhotoSubmit from "@/components/PhotoSubmit";
 import Gallery from "@/components/Gallery";
 import JsonLd, { SITE } from "@/components/JsonLd";
-import LocationCard from "@/components/LocationCard";
+import Map3DButton from "@/components/Map3DButton";
 import MapLoader from "@/components/MapLoader";
 import ShareBar from "@/components/ShareBar";
 import { apiGet, PUBLIC_API, type Inscription } from "@/lib/api";
@@ -231,11 +231,9 @@ export default async function InscriptionPage({ params }: P) {
           <div className="block">
             <MapLoader className="map-mini" points={[{ lat, lng, title: pick(it.monument, "name", lang) }]} />
             <div className="map-actions">
+              <Map3DButton lat={lat} lng={lng} title={pick(it.monument, "name", lang)} />
               <Link href={`/${lang}/xarita?bitik=${it.slug}`} className="btn btn-outline btn-sm">📍 {d.live.title}</Link>
             </div>
-          </div>
-          <div className="block">
-            <LocationCard lat={lat} lng={lng} name={pick(it.monument, "name", lang)} address={it.monument.address || it.monument.city} />
           </div>
 
           <div className="card card-body block">
