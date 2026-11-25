@@ -8,4 +8,4 @@ class CatalogConfig(AppConfig):
     verbose_name = "Katalog"
 
     def ready(self):
-        from . import signals  # noqa: F401
+        from . import imaging, signals  # noqa: F401  (imaging: HEIC formatini ro'yxatdan o'tkazadi)

@@ -74,7 +74,10 @@ class Monument(TimeStamped):
     century = models.SmallIntegerField("Asr (raqamda)", null=True, blank=True)
     latitude = models.DecimalField("Kenglik", max_digits=9, decimal_places=6)
     longitude = models.DecimalField("Uzunlik", max_digits=9, decimal_places=6)
-    cover_image = models.ImageField("Muqova rasmi", upload_to="monuments/", blank=True)
+    cover_image = models.ImageField("Muqova rasmi", upload_to="monuments/", blank=True,
+                                    help_text="Asl sifatda saqlanadi; saytda tez ochilishi uchun nusxalar avtomatik yaratiladi")
+    cover_large = models.ImageField(upload_to="monuments/web/", blank=True, editable=False)
+    cover_thumb = models.ImageField(upload_to="monuments/web/", blank=True, editable=False)
     is_published = models.BooleanField("Nashr qilingan", default=True)
 
     history = HistoricalRecords(verbose_name="O'zgarishlar tarixi")
@@ -83,6 +86,50 @@ class Monument(TimeStamped):
         ordering = ("name_uz",)
         verbose_name = "Obida"
         verbose_name_plural = "Obidalar"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = unique_slug(self, self.name_en or self.name_uz)
+        from .imaging import attach_variants
+
+        attach_variants(self, "cover_image", "cover_large", "cover_thumb")
+        if not self.cover_image:
+            self.cover_large = self.cover_thumb = ""
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name_uz
+
+
+class Person(TimeStamped):
+    """Bitiklarga aloqador shaxslar: xattot, usta (me'mor, koshinkor), homiy, hukmdor, muallif (shoir)."""
+
+    class Role(models.TextChoices):
+        CALLIGRAPHER = "calligrapher", "Xattot"
+        MASTER = "master", "Usta / me'mor"
+        PATRON = "patron", "Homiy / bunyodkor"
+        RULER = "ruler", "Hukmdor"
+        AUTHOR = "author", "Muallif (shoir, olim)"
+        OTHER = "other", "Boshqa"
+
+    slug = models.SlugField(max_length=200, unique=True, blank=True)
+    name_uz = models.CharField("Ismi (UZ)", max_length=255)
+    name_ru = models.CharField("Ismi (RU)", max_length=255, blank=True)
+    name_en = models.CharField("Ismi (EN)", max_length=255, blank=True)
+    name_original = models.CharField("Asl yozuvda", max_length=255, blank=True, help_text="Arab grafikasida")
+    role = models.CharField("Asosiy roli", max_length=20, choices=Role.choices, default=Role.CALLIGRAPHER)
+    years = models.CharField("Yashagan yillari", max_length=80, blank=True, help_text="Masalan: 1394–1449")
+    year_from = models.SmallIntegerField("Tug'ilgan yil", null=True, blank=True)
+    year_to = models.SmallIntegerField("Vafot yili", null=True, blank=True)
+    bio_uz = models.TextField("Tarjimai hol (UZ)", blank=True)
+    bio_ru = models.TextField("Tarjimai hol (RU)", blank=True)
+    bio_en = models.TextField("Tarjimai hol (EN)", blank=True)
+    portrait = models.ImageField("Surat / miniatyura", upload_to="persons/", blank=True)
+
+    class Meta:
+        ordering = ("name_uz",)
+        verbose_name = "Shaxs"
+        verbose_name_plural = "Shaxslar"
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -133,6 +180,21 @@ class Inscription(TimeStamped):
         PUBLISHED = "published", "Nashr qilingan"
         REJECTED = "rejected", "Rad etilgan"
 
+    class Dynasty(models.TextChoices):
+        PRE_ISLAMIC = "pre_islamic", "Islomgacha davr"
+        SAMANID = "samanid", "Somoniylar (819–999)"
+        KARAKHANID = "karakhanid", "Qoraxoniylar (X–XIII)"
+        KHWARAZMSHAH = "khwarazmshah", "Xorazmshohlar (XI–XIII)"
+        MONGOL = "mongol", "Mo'g'ullar / Chig'atoy ulusi (XIII–XIV)"
+        TIMURID = "timurid", "Temuriylar (1370–1507)"
+        SHAYBANID = "shaybanid", "Shayboniylar (1500–1601)"
+        ASHTARKHANID = "ashtarkhanid", "Ashtarxoniylar (1601–1756)"
+        MANGHIT = "manghit", "Mang'itlar / Buxoro amirligi (1756–1920)"
+        KHIVA = "khiva", "Xiva xonligi (1511–1920)"
+        KOKAND = "kokand", "Qo'qon xonligi (1709–1876)"
+        MODERN = "modern", "XX–XXI asrlar"
+        UNKNOWN = "", "Aniqlanmagan"
+
     slug = models.SlugField(max_length=200, unique=True, blank=True)
     monument = models.ForeignKey(Monument, on_delete=models.CASCADE, related_name="inscriptions", verbose_name="Obida")
 
@@ -161,6 +223,10 @@ class Inscription(TimeStamped):
     year_to = models.SmallIntegerField("Yilgacha (milodiy)", null=True, blank=True)
     hijri_date = models.CharField("Hijriy sana", max_length=60, blank=True)
     calligrapher = models.CharField("Xattot / usta", max_length=255, blank=True)
+    dynasty = models.CharField("Davr / sulola", max_length=20, choices=Dynasty.choices, blank=True, default="", db_index=True)
+    quran_refs = models.CharField("Qur'on oyatlari", max_length=255, blank=True,
+                                  help_text="Sura:oyat, nuqta-vergul bilan. Masalan: 2:255; 55:26-27; 112")
+    persons = models.ManyToManyField(Person, blank=True, related_name="inscriptions", verbose_name="Aloqador shaxslar")
 
     latitude = models.DecimalField("Kenglik (aniqroq)", max_digits=9, decimal_places=6, null=True, blank=True,
                                    help_text="Bo'sh bo'lsa, obida koordinatasi ishlatiladi")
@@ -228,7 +294,12 @@ class Inscription(TimeStamped):
 
 class InscriptionImage(models.Model):
     inscription = models.ForeignKey(Inscription, on_delete=models.CASCADE, related_name="images")
-    image = models.ImageField("Rasm", upload_to="inscriptions/%Y/%m/")
+    image = models.ImageField("Rasm (asl sifatda)", upload_to="inscriptions/%Y/%m/",
+                              help_text="JPEG, PNG, WEBP yoki iPhone HEIC. Asl fayl siqilmasdan saqlanadi")
+    image_large = models.ImageField(upload_to="inscriptions/web/%Y/%m/", blank=True, editable=False)
+    image_thumb = models.ImageField(upload_to="inscriptions/web/%Y/%m/", blank=True, editable=False)
+    width = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    height = models.PositiveIntegerField(null=True, blank=True, editable=False)
     caption = models.CharField("Izoh", max_length=255, blank=True)
     credit = models.CharField("Muallif / manba", max_length=255, blank=True)
     is_primary = models.BooleanField("Asosiy rasm", default=False)
@@ -240,6 +311,12 @@ class InscriptionImage(models.Model):
         ordering = ("-is_primary", "order", "id")
         verbose_name = "Rasm"
         verbose_name_plural = "Rasmlar"
+
+    def save(self, *args, **kwargs):
+        from .imaging import attach_variants
+
+        attach_variants(self, "image", "image_large", "image_thumb", ("width", "height"))
+        super().save(*args, **kwargs)
 
 
 class Source(models.Model):
@@ -343,3 +420,64 @@ class RouteStop(models.Model):
         ordering = ("order", "id")
         verbose_name = "Bekat"
         verbose_name_plural = "Bekatlar"
+
+
+class Term(models.Model):
+    """Atamalar lug'ati: yozuv uslublari, texnikalar, me'moriy qismlar.
+    `key` yozuv uslubi yoki texnika qiymatiga teng bo'lsa (masalan "thuluth", "bannai"),
+    bitik sahifasida avtomatik izoh sifatida ko'rsatiladi."""
+
+    class Group(models.TextChoices):
+        SCRIPT = "script", "Yozuv uslubi"
+        TECHNIQUE = "technique", "Ijro texnikasi"
+        ARCHITECTURE = "architecture", "Me'moriy qism"
+        TEXT = "text", "Matn turi / formula"
+        OTHER = "other", "Boshqa"
+
+    key = models.SlugField("Kalit", max_length=60, unique=True)
+    group = models.CharField("Guruh", max_length=20, choices=Group.choices, default=Group.OTHER)
+    term_uz = models.CharField("Atama (UZ)", max_length=120)
+    term_ru = models.CharField("Atama (RU)", max_length=120, blank=True)
+    term_en = models.CharField("Atama (EN)", max_length=120, blank=True)
+    term_original = models.CharField("Asl shakli", max_length=120, blank=True)
+    definition_uz = models.TextField("Izoh (UZ)")
+    definition_ru = models.TextField("Izoh (RU)", blank=True)
+    definition_en = models.TextField("Izoh (EN)", blank=True)
+
+    class Meta:
+        ordering = ("group", "term_uz")
+        verbose_name = "Atama"
+        verbose_name_plural = "Atamalar lug'ati"
+
+    def __str__(self):
+        return self.term_uz
+
+
+class VisitorPhoto(TimeStamped):
+    """Tashrif buyuruvchilar yuborgan rasmlar — muharrir tasdiqlagach bitik galereyasiga qo'shiladi."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Kutilmoqda"
+        APPROVED = "approved", "Qabul qilindi"
+        REJECTED = "rejected", "Rad etildi"
+
+    inscription = models.ForeignKey(Inscription, on_delete=models.CASCADE, null=True, blank=True,
+                                    related_name="visitor_photos", verbose_name="Bitik")
+    monument = models.ForeignKey(Monument, on_delete=models.CASCADE, null=True, blank=True,
+                                 related_name="visitor_photos", verbose_name="Obida")
+    image = models.ImageField("Rasm", upload_to="visitor/%Y/%m/")
+    author_name = models.CharField("Muallif", max_length=120)
+    author_email = models.EmailField("Email", blank=True)
+    note = models.TextField("Izoh", blank=True)
+    consent = models.BooleanField("CC BY 4.0 litsenziyasiga rozilik", default=False)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
+    lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name = "Tashrifchi rasmi"
+        verbose_name_plural = "Tashrifchilar rasmlari"
+
+    def __str__(self):
+        return f"{self.author_name} — {self.inscription or self.monument}"

@@ -17,7 +17,8 @@ from rest_framework.throttling import UserRateThrottle
 
 from . import export
 from .filters import InscriptionFilter, MonumentFilter
-from .models import Inscription, Monument, Region, Route, Suggestion
+from .models import Inscription, Monument, Person, Region, Route, Suggestion, Term
+from .quran import BY_NUM, parse_refs
 from .permissions import InscriptionPermission, IsEditor, IsEditorOrReadOnly
 from .serializers import abs_url
 from .serializers import (
@@ -28,9 +29,13 @@ from .serializers import (
     MonumentDetailSerializer,
     MonumentListSerializer,
     RegionSerializer,
+    PersonDetailSerializer,
+    PersonSerializer,
     RouteDetailSerializer,
     RouteListSerializer,
     SuggestionSerializer,
+    TermSerializer,
+    VisitorPhotoSerializer,
 )
 
 PUBLISHED = Inscription.Status.PUBLISHED
@@ -124,7 +129,7 @@ class InscriptionViewSet(viewsets.ModelViewSet):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get_queryset(self):
-        qs = Inscription.objects.select_related("monument", "monument__region").prefetch_related("images", "sources")
+        qs = Inscription.objects.select_related("monument", "monument__region").prefetch_related("images", "sources", "persons")
         u = self.request.user
         if u.is_authenticated and u.is_editor:
             return qs
@@ -168,7 +173,7 @@ class InscriptionViewSet(viewsets.ModelViewSet):
                     "monument_slug": i.monument.slug, "monument_uz": i.monument.name_uz,
                     "monument_ru": i.monument.name_ru, "monument_en": i.monument.name_en,
                     "city": i.monument.city, "precise": i.latitude is not None,
-                    "image_url": abs_url(request, imgs[0].image) if imgs else None,
+                    "image_url": abs_url(request, imgs[0].image_thumb or imgs[0].image) if imgs else None,
                     "original_text": i.original_text[:80],
                 },
             })
@@ -411,3 +416,157 @@ def editor_overview(request):
                  "views_count": i.views_count} for i in top],
         "history": history,
     })
+
+
+# ---------- Shaxslar, lug'at ----------
+
+class PersonViewSet(viewsets.ReadOnlyModelViewSet):
+    lookup_field = "slug"
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = Person.objects.annotate(inscriptions_count=Count(
+            "inscriptions", filter=Q(inscriptions__status=PUBLISHED), distinct=True))
+        role = self.request.query_params.get("role")
+        return qs.filter(role=role) if role else qs
+
+    def get_serializer_class(self):
+        return PersonDetailSerializer if self.action == "retrieve" else PersonSerializer
+
+
+class TermViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = TermSerializer
+    lookup_field = "key"
+    pagination_class = None
+    queryset = Term.objects.all()
+
+
+def _brief(i):
+    return {
+        "slug": i.slug, "title_uz": i.title_uz, "title_ru": i.title_ru, "title_en": i.title_en,
+        "monument_uz": i.monument.name_uz, "monument_ru": i.monument.name_ru, "monument_en": i.monument.name_en,
+        "monument_slug": i.monument.slug, "city": i.monument.city, "language": i.language, "script": i.script,
+        "year_from": i.year_from, "year_to": i.year_to, "period_text": i.period_text, "dynasty": i.dynasty,
+        "original_text": i.original_text[:90],
+    }
+
+
+# ---------- Qur'on oyatlari ko'rsatkichi ----------
+
+@cached(600)
+@api_view(["GET"])
+@permission_classes([permissions.AllowAny])
+def quran_index(request):
+    """Qaysi oyat qaysi obidalarda bitilgan — suralar tartibida."""
+    by_surah = {}
+    qs = Inscription.objects.filter(status=PUBLISHED).exclude(quran_refs="").select_related("monument")
+    for i in qs:
+        for ref in parse_refs(i.quran_refs):
+            entry = by_surah.setdefault(ref["surah"], {
+                "surah": ref["surah"], "name": ref["name"], "name_ar": ref["name_ar"],
+                "ayahs": BY_NUM[ref["surah"]][2], "items": [],
+            })
+            entry["items"].append({**_brief(i), "ref": ref["label"], "from": ref["from"]})
+    out = sorted(by_surah.values(), key=lambda e: e["surah"])
+    for e in out:
+        e["items"].sort(key=lambda x: (x["from"] or 0, x["monument_uz"]))
+    return Response({"surahs": out, "total": sum(len(e["items"]) for e in out)})
+
+
+# ---------- Vaqt chizig'i ----------
+
+DYNASTY_ORDER = [v for v, _ in Inscription.Dynasty.choices]
+
+
+@cached(600)
+@api_view(["GET"])
+@permission_classes([permissions.AllowAny])
+def timeline(request):
+    """Bitiklar sulolalar va yillar bo'yicha."""
+    qs = (Inscription.objects.filter(status=PUBLISHED).select_related("monument")
+          .order_by("year_from", "monument__name_uz"))
+    groups = {}
+    for i in qs:
+        key = i.dynasty or ""
+        groups.setdefault(key, []).append(_brief(i))
+    labels = dict(Inscription.Dynasty.choices)
+    out = [{"dynasty": k, "label": labels.get(k, k), "items": groups[k]}
+           for k in DYNASTY_ORDER if k in groups and k != ""]
+    if "" in groups:
+        out.append({"dynasty": "", "label": labels[""], "items": groups[""]})
+    return Response({"groups": out})
+
+
+# ---------- Viktorina (AI'siz, katalog ma'lumotidan) ----------
+
+@api_view(["GET"])
+@permission_classes([permissions.AllowAny])
+def quiz(request):
+    """Tasodifiy 8 ta savol: bitik qaysi obidada, qaysi tilda, qaysi shaharda, qaysi yozuv uslubida."""
+    import random
+
+    pub = list(Inscription.objects.filter(status=PUBLISHED).select_related("monument").prefetch_related("images"))
+    if len(pub) < 2:
+        return Response({"questions": []})
+    all_mon = list(Monument.objects.filter(is_published=True))
+    cities = sorted({m.city for m in all_mon if m.city})
+    langs = [v for v, _ in Inscription.Language.choices]
+    scripts = [v for v, _ in Inscription.Script.choices if v != "other"]
+    rng = random.Random()
+    rng.shuffle(pub)
+
+    def img(i):
+        imgs = list(i.images.all())
+        if not imgs:
+            return None
+        return abs_url(request, imgs[0].image_thumb or imgs[0].image)
+
+    def mon_opt(m):
+        return {"uz": m.name_uz, "ru": m.name_ru or m.name_uz, "en": m.name_en or m.name_uz}
+
+    questions = []
+    kinds = ["monument", "language", "city", "script"]
+    for n, i in enumerate(pub * 3):
+        if len(questions) >= 8:
+            break
+        kind = kinds[n % len(kinds)]
+        q = {"kind": kind, "slug": i.slug, "text": i.original_text[:160], "image": img(i),
+             "title": {"uz": i.title_uz, "ru": i.title_ru or i.title_uz, "en": i.title_en or i.title_uz}}
+        if kind == "monument" and len(all_mon) >= 3:
+            wrong = rng.sample([m for m in all_mon if m.id != i.monument_id], min(3, len(all_mon) - 1))
+            opts = [mon_opt(i.monument)] + [mon_opt(m) for m in wrong]
+        elif kind == "language":
+            opts = [{"key": i.language}] + [{"key": x} for x in rng.sample([x for x in langs if x != i.language], 3)]
+        elif kind == "city" and len(cities) >= 3 and i.monument.city:
+            wrong = rng.sample([c for c in cities if c != i.monument.city], min(3, len(cities) - 1))
+            opts = [{"uz": i.monument.city, "ru": i.monument.city, "en": i.monument.city}] + [
+                {"uz": c, "ru": c, "en": c} for c in wrong]
+        elif kind == "script" and i.script != "other":
+            opts = [{"key": i.script}] + [{"key": x} for x in rng.sample([x for x in scripts if x != i.script], 3)]
+        else:
+            continue
+        correct = opts[0]
+        rng.shuffle(opts)
+        q["options"] = opts
+        q["answer"] = opts.index(correct)
+        questions.append(q)
+    return Response({"questions": questions})
+
+
+# ---------- Tashrifchilar rasmi ----------
+
+class PhotoThrottle(UserRateThrottle):
+    scope = "photos"
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}
+
+
+@api_view(["POST"])
+@permission_classes([permissions.AllowAny])
+@throttle_classes([PhotoThrottle])
+def submit_photo(request):
+    ser = VisitorPhotoSerializer(data=request.data)
+    ser.is_valid(raise_exception=True)
+    ser.save()
+    return Response({"ok": True}, status=status.HTTP_201_CREATED)

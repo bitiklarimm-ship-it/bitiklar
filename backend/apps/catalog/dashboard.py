@@ -117,3 +117,10 @@ def dashboard_callback(request, context):
         ],
     })
     return context
+
+
+def badge_photos(request):
+    from .models import VisitorPhoto
+
+    n = VisitorPhoto.objects.filter(status=VisitorPhoto.Status.PENDING).count()
+    return n or None

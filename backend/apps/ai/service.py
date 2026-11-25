@@ -2,7 +2,6 @@
 
 Natija faqat QORALAMA hisoblanadi: uni mutaxassis tekshirmasdan nashr qilinmaydi.
 """
-import base64
 import json
 import re
 
@@ -35,12 +34,15 @@ class AIUnavailable(Exception):
 def analyze_image(file_obj, content_type, hint=""):
     if not settings.ANTHROPIC_API_KEY:
         raise AIUnavailable("ANTHROPIC_API_KEY sozlanmagan")
-    if content_type not in ALLOWED_MEDIA:
-        raise ValueError("Faqat JPEG, PNG, WEBP yoki GIF rasm qabul qilinadi")
-
     import anthropic
 
-    data = base64.standard_b64encode(file_obj.read()).decode()
+    from .guide import to_jpeg_b64
+
+    try:  # har qanday format (HEIC ham) JPEG'ga aylantiriladi va kichraytiriladi
+        data = to_jpeg_b64(file_obj, max_side=2000)
+    except Exception:
+        raise ValueError("Rasmni o'qib bo'lmadi. JPEG, PNG, WEBP yoki HEIC yuklang")
+    content_type = "image/jpeg"
     client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
     text = PROMPT + (f"\n\nContext from the researcher: {hint}" if hint else "")
     msg = client.messages.create(

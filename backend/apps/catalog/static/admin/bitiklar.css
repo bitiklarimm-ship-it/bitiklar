@@ -115,3 +115,15 @@ html.dark {
 .bk-ann-actions .button, .bk-ann-list .button, button.button { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--bk-line); background: var(--bk-bg); color: var(--bk-ink); cursor: pointer; font-weight: 600; }
 .bk-ann-actions .button.default { background: var(--bk-lapis); border-color: var(--bk-lapis); color: #fff; }
 html.dark .bk-ann-actions .button.default { color: #0b1220; }
+
+/* Import sahifasi */
+.bk-steps { margin: 0 0 14px 18px; padding: 0; font-size: 14px; line-height: 1.7; }
+.bk-form { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.bk-form input[type=file] { padding: 10px; border: 1px dashed var(--bk-line); border-radius: 10px; width: 100%; background: var(--bk-bg2); }
+.bk-form label { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.bk-alert { background: var(--bk-err-bg); padding: 10px 12px; border-radius: 10px; }
+.bk-pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--bk-bg2); }
+.bk-pill.bk-created { background: var(--bk-ok-bg); color: var(--bk-ok); }
+.bk-pill.bk-updated { background: rgba(59,130,246,.15); color: #3b82f6; }
+.bk-pill.bk-skipped { background: var(--bk-bg2); color: var(--bk-muted); }
+.bk-pill.bk-error { background: var(--bk-err-bg); color: #dc2626; }

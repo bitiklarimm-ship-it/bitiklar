@@ -82,14 +82,20 @@
 
     loadLeaflet(function () {
       var L = window.L;
-      var osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19, attribution: "&copy; OpenStreetMap contributors",
+      // Standart: sun'iy yo'ldosh + joy nomlari (gibrid) — binoning qaysi qismida ekanini aniq ko'rish uchun
+      var opts = { maxZoom: 21, maxNativeZoom: 19 };
+      var esri = "https://server.arcgisonline.com/ArcGIS/rest/services/";
+      var sat = L.tileLayer(esri + "World_Imagery/MapServer/tile/{z}/{y}/{x}", Object.assign({ attribution: "Tasvirlar &copy; Esri, Maxar" }, opts));
+      var places = L.tileLayer(esri + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", opts);
+      var roads = L.tileLayer(esri + "Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", Object.assign({ opacity: 0.7 }, opts));
+      var hybrid = L.layerGroup([sat, roads, places]);
+      var satOnly = L.tileLayer(esri + "World_Imagery/MapServer/tile/{z}/{y}/{x}", Object.assign({ attribution: "Tasvirlar &copy; Esri, Maxar" }, opts));
+      var street = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        maxZoom: 21, maxNativeZoom: 20, subdomains: "abcd",
+        attribution: "&copy; OpenStreetMap &copy; CARTO",
       });
-      var sat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-        maxZoom: 19, attribution: "Tiles &copy; Esri",
-      });
-      var map = L.map(mapDiv, { layers: [osm] }).setView(UZ_CENTER, 6);
-      L.control.layers({ "Xarita": osm, "Sun'iy yo'ldosh": sat }).addTo(map);
+      var map = L.map(mapDiv, { layers: [hybrid], maxZoom: 21 }).setView(UZ_CENTER, 6);
+      L.control.layers({ "Sun'iy yo'ldosh (gibrid)": hybrid, "Sun'iy yo'ldosh": satOnly, "Xarita": street }).addTo(map);
 
       var marker = null;
       var monumentMarker = null;

@@ -12,7 +12,9 @@ from simple_history.admin import SimpleHistoryAdmin
 from unfold.admin import ModelAdmin, StackedInline, TabularInline
 from unfold.decorators import action, display
 
-from .models import Inscription, InscriptionImage, Monument, Region, Route, RouteStop, Source, Suggestion
+from .models import (
+    Inscription, InscriptionImage, Monument, Person, Region, Route, RouteStop, Source, Suggestion, Term, VisitorPhoto,
+)
 
 MAP_MEDIA_JS = ("admin/bitiklar/map_picker.js",)
 S = Inscription.Status
@@ -78,7 +80,7 @@ class MonumentAdmin(SimpleHistoryAdmin, ModelAdmin):
 
     @display(description="")
     def cover(self, obj):
-        return thumb(obj.cover_image.url if obj.cover_image else None)
+        return thumb((obj.cover_thumb or obj.cover_image).url if obj.cover_image else None)
 
     @display(description="Obida", header=True, ordering="name_uz")
     def name_col(self, obj):
@@ -123,7 +125,9 @@ class ImageInline(TabularInline):
     def preview(self, obj):
         if not obj.image:
             return ""
-        return format_html('<img class="bk-preview" src="{0}" data-full="{0}" style="height:70px;border-radius:8px">', obj.image.url)
+        small = (obj.image_thumb or obj.image).url
+        big = (obj.image_large or obj.image).url
+        return format_html('<img class="bk-preview" src="{}" data-full="{}" style="height:70px;border-radius:8px">', small, big)
 
 
 class SourceInline(StackedInline):
@@ -138,15 +142,16 @@ class InscriptionAdmin(SimpleHistoryAdmin, ModelAdmin):
     list_display = ("image_col", "title_col", "status_col", "language_col", "script", "period_text",
                     "submitted_by", "views_count", "is_featured")
     list_display_links = ("image_col", "title_col")
-    list_filter = ("status", "language", "script", "technique", "monument__region", "is_featured")
+    list_filter = ("status", "language", "script", "technique", "dynasty", "monument__region", "is_featured")
     list_filter_submit = True
     search_fields = ("title_uz", "title_ru", "title_en", "original_text", "translation_uz", "monument__name_uz", "calligrapher")
-    autocomplete_fields = ("monument",)
+    autocomplete_fields = ("monument", "persons")
     readonly_fields = ("slug", "submitted_by", "reviewed_by", "published_at", "views_count", "qr_preview", "audio_preview")
     inlines = [ImageInline, SourceInline]
-    actions = ["approve", "reject", "feature", "unfeature"]
+    actions = ["approve", "reject", "feature", "unfeature", "ai_translate"]
     actions_row = ["row_approve", "row_reject"]
-    actions_detail = ["detail_approve", "detail_reject", "detail_view_site"]
+    actions_detail = ["detail_approve", "detail_reject", "detail_ai_translate", "detail_view_site"]
+    actions_list = ["import_link"]
     list_per_page = 30
     save_on_top = True
     warn_unsaved_form = True
@@ -160,7 +165,9 @@ class InscriptionAdmin(SimpleHistoryAdmin, ModelAdmin):
         ("Tarjima va izoh", {"classes": ["tab"], "fields": (
             "translation_uz", "translation_ru", "translation_en", "commentary_uz", "commentary_ru", "commentary_en",
         )}),
-        ("Sana va muallif", {"classes": ["tab"], "fields": (("period_text", "hijri_date"), ("year_from", "year_to"), "calligrapher")}),
+        ("Sana va muallif", {"classes": ["tab"], "fields": (
+            ("period_text", "hijri_date"), ("year_from", "year_to"), "dynasty", "calligrapher", "persons", "quran_refs",
+        )}),
         ("Joylashuv", {"classes": ["tab"], "fields": (("latitude", "longitude"),),
                        "description": "Bitikning aniq joyi (ixtiyoriy). Bo'sh qolsa, obida koordinatasi ishlatiladi."}),
         ("Audio", {"classes": ["tab"], "fields": ("audio", "audio_caption", "audio_preview")}),
@@ -179,7 +186,9 @@ class InscriptionAdmin(SimpleHistoryAdmin, ModelAdmin):
     @display(description="")
     def image_col(self, obj):
         imgs = list(obj.images.all())
-        return thumb(imgs[0].image.url if imgs and imgs[0].image else None)
+        if not imgs or not imgs[0].image:
+            return thumb(None)
+        return thumb((imgs[0].image_thumb or imgs[0].image).url)
 
     @display(description="Bitik", header=True, ordering="title_uz")
     def title_col(self, obj):
@@ -278,6 +287,105 @@ class InscriptionAdmin(SimpleHistoryAdmin, ModelAdmin):
         self.message_user(request, "Bitik rad etildi. Muallifga xabar yuborildi.", messages.WARNING)
         return self._back(request, object_id)
 
+    # --- AI tarjima qoralamasi ---
+    def _ai_fill(self, request, obj):
+        from apps.ai.guide import fill_translations
+        from apps.ai.service import AIUnavailable
+
+        try:
+            filled = fill_translations(obj)
+        except AIUnavailable as e:
+            self.message_user(request, str(e), messages.ERROR)
+            return None
+        except Exception as e:  # noqa: BLE001
+            self.message_user(request, f"«{obj.title_uz}»: AI xatosi — {e}", messages.ERROR)
+            return None
+        if filled:
+            stamp = timezone.localtime().strftime("%d.%m.%Y")
+            note = f"[AI tarjima qoralamasi {stamp}: {', '.join(filled)} — mutaxassis tekshirsin]"
+            obj.review_note = f"{obj.review_note}\n{note}".strip()
+            obj.save()
+        return filled
+
+    @admin.action(description="AI: bo'sh tarjimalarni qoralama bilan to'ldirish")
+    def ai_translate(self, request, queryset):
+        total = 0
+        for obj in queryset[:20]:  # bir martada 20 tadan (vaqt va xarajat chegarasi)
+            filled = self._ai_fill(request, obj)
+            if filled is None:
+                break
+            total += len(filled)
+        self.message_user(request, f"AI {total} ta maydonni to'ldirdi. «Ko'rib chiqish» bo'limidagi izohga qarang.",
+                          messages.SUCCESS)
+
+    @action(description="AI: tarjimalarni to'ldirish", url_path="detail-ai-translate", permissions=["change"])
+    def detail_ai_translate(self, request, object_id):
+        obj = Inscription.objects.get(pk=object_id)
+        filled = self._ai_fill(request, obj)
+        if filled:
+            self.message_user(request, f"To'ldirildi: {', '.join(filled)}. Iltimos, tekshirib chiqing.", messages.SUCCESS)
+        elif filled == []:
+            self.message_user(request, "Bo'sh tarjima maydoni yo'q.", messages.INFO)
+        return self._back(request, object_id)
+
+    # --- Excel import ---
+    @action(description="⬆ Excel'dan import", url_path="import-link")
+    def import_link(self, request):
+        return HttpResponseRedirect(reverse("admin:catalog_inscription_import"))
+
+    def get_urls(self):
+        from django.urls import path
+
+        extra = [
+            path("import/", self.admin_site.admin_view(self.import_view), name="catalog_inscription_import"),
+            path("import/template/", self.admin_site.admin_view(self.import_template), name="catalog_inscription_import_template"),
+        ]
+        return extra + super().get_urls()
+
+    def import_template(self, request):
+        from django.http import HttpResponse
+
+        from .importer import template_xlsx
+
+        resp = HttpResponse(template_xlsx(),
+                            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        resp["Content-Disposition"] = 'attachment; filename="bitiklar-import-namuna.xlsx"'
+        return resp
+
+    def import_view(self, request):
+        from django.core.exceptions import PermissionDenied
+        from django.template.response import TemplateResponse
+
+        from .importer import import_rows, read_rows
+
+        if not self.has_add_permission(request):
+            raise PermissionDenied
+        report, error, dry = None, "", True
+        if request.method == "POST":
+            f = request.FILES.get("file")
+            dry = request.POST.get("dry_run") == "on"
+            if not f:
+                error = "Faylni tanlang."
+            elif not f.name.lower().endswith((".xlsx", ".csv")):
+                error = "Faqat .xlsx yoki .csv fayl qabul qilinadi."
+            else:
+                try:
+                    rows = read_rows(f)
+                    report = import_rows(rows, request.user, dry_run=dry,
+                                         update_existing=request.POST.get("update") == "on")
+                except Exception as e:  # noqa: BLE001
+                    error = f"Faylni o'qib bo'lmadi: {e}"
+        summary = {}
+        for r in report or []:
+            summary[r["result"]] = summary.get(r["result"], 0) + 1
+        ctx = {
+            **self.admin_site.each_context(request),
+            "title": "Excel'dan bitiklarni import qilish",
+            "opts": self.model._meta,
+            "report": report, "summary": summary, "error": error, "dry": dry,
+        }
+        return TemplateResponse(request, "admin/catalog/import.html", ctx)
+
     @action(description="Saytda ko'rish ↗", url_path="detail-view-site")
     def detail_view_site(self, request, object_id):
         obj = Inscription.objects.get(pk=object_id)
@@ -358,3 +466,104 @@ class RouteAdmin(ModelAdmin):
     @display(description="Bekatlar")
     def stops_n(self, obj):
         return obj.stops.count()
+
+
+
+# ---------------------------------------------------------------- Shaxslar, lug'at
+
+@admin.register(Person)
+class PersonAdmin(ModelAdmin):
+    list_display = ("name_col", "role_col", "years", "inscriptions_n")
+    list_filter = ("role",)
+    search_fields = ("name_uz", "name_ru", "name_en", "name_original")
+    readonly_fields = ("slug",)
+    fieldsets = (
+        (None, {"fields": (("name_uz", "name_ru", "name_en"), ("name_original", "slug"), ("role", "years"),
+                           ("year_from", "year_to"), "portrait")}),
+        ("Tarjimai hol", {"fields": ("bio_uz", "bio_ru", "bio_en")}),
+    )
+
+    @display(description="Shaxs", header=True, ordering="name_uz")
+    def name_col(self, obj):
+        return [obj.name_uz, obj.name_original or obj.name_en or ""]
+
+    @display(description="Roli", ordering="role", label=True)
+    def role_col(self, obj):
+        return obj.get_role_display()
+
+    @display(description="Bitiklar")
+    def inscriptions_n(self, obj):
+        return obj.inscriptions.count()
+
+
+@admin.register(Term)
+class TermAdmin(ModelAdmin):
+    list_display = ("term_uz", "term_original", "group", "key")
+    list_filter = ("group",)
+    search_fields = ("term_uz", "term_ru", "term_en", "key")
+    fieldsets = (
+        (None, {"fields": (("key", "group"), ("term_uz", "term_ru", "term_en"), "term_original")}),
+        ("Izoh", {"fields": ("definition_uz", "definition_ru", "definition_en"),
+                  "description": "Kalit yozuv uslubi yoki texnika qiymatiga teng bo'lsa (masalan thuluth, bannai), "
+                                 "izoh bitik sahifasida avtomatik ko'rsatiladi."}),
+    )
+
+
+# ---------------------------------------------------------------- Tashrifchilar rasmlari
+
+@admin.register(VisitorPhoto)
+class VisitorPhotoAdmin(ModelAdmin):
+    list_display = ("preview", "target", "author_name", "status_col", "created_at")
+    list_filter = ("status",)
+    search_fields = ("author_name", "author_email", "note", "inscription__title_uz", "monument__name_uz")
+    readonly_fields = ("preview_big", "created_at")
+    autocomplete_fields = ("inscription", "monument")
+    actions = ["approve", "reject"]
+    fields = ("preview_big", "inscription", "monument", "author_name", "author_email", "note", "consent", "status",
+              "lat", "lng", "created_at")
+
+    @display(description="")
+    def preview(self, obj):
+        return thumb(obj.image.url if obj.image else None, 56)
+
+    @display(description="Rasm")
+    def preview_big(self, obj):
+        return format_html('<a href="{0}" target="_blank"><img src="{0}" style="max-height:360px;border-radius:10px"></a>',
+                           obj.image.url) if obj.image else "—"
+
+    @display(description="Qayerga")
+    def target(self, obj):
+        return obj.inscription or obj.monument
+
+    @display(description="Holati", ordering="status", label={"Kutilmoqda": "warning", "Qabul qilindi": "success", "Rad etildi": "danger"})
+    def status_col(self, obj):
+        return obj.get_status_display()
+
+    @admin.action(description="Qabul qilish va galereyaga qo'shish")
+    def approve(self, request, queryset):
+        from pathlib import PurePosixPath
+
+        from django.core.files.base import ContentFile
+
+        n = 0
+        for p in queryset.filter(status=VisitorPhoto.Status.PENDING):
+            with p.image.open("rb") as fh:
+                data = fh.read()
+            name = PurePosixPath(p.image.name).name
+            if p.inscription:
+                img = InscriptionImage(inscription=p.inscription, caption=p.note[:255], credit=p.author_name,
+                                       order=p.inscription.images.count() + 1)
+                img.image = ContentFile(data, name=name)
+                img.save()
+            elif p.monument and not p.monument.cover_image:
+                p.monument.cover_image = ContentFile(data, name=name)
+                p.monument.save()
+            p.status = VisitorPhoto.Status.APPROVED
+            p.save(update_fields=["status"])
+            n += 1
+        self.message_user(request, f"{n} ta rasm qabul qilindi va galereyaga qo'shildi.", messages.SUCCESS)
+
+    @admin.action(description="Rad etish")
+    def reject(self, request, queryset):
+        n = queryset.filter(status=VisitorPhoto.Status.PENDING).update(status=VisitorPhoto.Status.REJECTED)
+        self.message_user(request, f"{n} ta rasm rad etildi.", messages.WARNING)

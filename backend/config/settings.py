@@ -198,7 +198,9 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ],
-    "DEFAULT_THROTTLE_RATES": {"anon": "120/min", "user": "600/min", "ai": "20/hour", "export": "30/hour"},
+    "DEFAULT_THROTTLE_RATES": {"anon": "120/min", "user": "600/min", "ai": "20/hour", "export": "30/hour",
+                                "ai_public": "30/hour", "ai_identify": "15/hour",
+                                "photos": "10/hour", "ai_translate": "40/hour"},
 }
 
 SIMPLE_JWT = {
@@ -321,7 +323,10 @@ UNFOLD = {
                          badge="apps.catalog.dashboard.badge_pending"),
                     _nav("Obidalar", "mosque", "admin:catalog_monument_changelist"),
                     _nav("Yo'nalishlar", "route", "admin:catalog_route_changelist"),
+                    _nav("Shaxslar", "person_book", "admin:catalog_person_changelist"),
+                    _nav("Atamalar lug'ati", "menu_book", "admin:catalog_term_changelist"),
                     _nav("Hududlar", "map", "admin:catalog_region_changelist"),
+                    _nav("Excel'dan import", "upload_file", "admin:catalog_inscription_import"),
                 ],
             },
             {
@@ -330,6 +335,8 @@ UNFOLD = {
                 "items": [
                     _nav("Tuzatish takliflari", "rate_review", "admin:catalog_suggestion_changelist",
                          badge="apps.catalog.dashboard.badge_suggestions"),
+                    _nav("Tashrifchilar rasmlari", "add_a_photo", "admin:catalog_visitorphoto_changelist",
+                         badge="apps.catalog.dashboard.badge_photos"),
                     _nav("Foydalanuvchilar", "group", "admin:accounts_user_changelist",
                          badge="apps.catalog.dashboard.badge_researchers"),
                     _nav("Guruhlar va ruxsatlar", "admin_panel_settings", "admin:auth_group_changelist",
