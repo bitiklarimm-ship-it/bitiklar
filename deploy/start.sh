@@ -5,8 +5,8 @@ set -e
 export PORT="${PORT:-10000}"
 
 cd /app/backend
-python manage.py makemigrations accounts catalog --noinput
-python manage.py migrate --noinput
+# Migratsiyalar: fayllar bazada saqlanadi, eski sxema ma'lumot o'chirilmasdan yangilanadi
+python manage.py smart_migrate
 if [ "$SEED_DEMO" = "1" ]; then python manage.py seed_demo; fi
 if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; then
   python manage.py createsuperuser --noinput 2>/dev/null || true
