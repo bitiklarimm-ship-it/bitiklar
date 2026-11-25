@@ -1,0 +1,8 @@
+.env
+node_modules/
+.next/
+backend/staticfiles/
+backend/media/
+__pycache__/
+*.pyc
+.ruff_cache/
