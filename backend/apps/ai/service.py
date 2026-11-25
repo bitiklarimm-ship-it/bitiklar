@@ -5,7 +5,6 @@ Natija faqat QORALAMA hisoblanadi: uni mutaxassis tekshirmasdan nashr qilinmaydi
 import json
 import re
 
-from django.conf import settings
 
 PROMPT = """You are assisting epigraphers who catalogue inscriptions on historic monuments in Uzbekistan
 (mosques, madrasas, mausoleums, minarets). Look at the photo and return ONLY a JSON object:
@@ -27,36 +26,18 @@ Be conservative: if you cannot read part of the text, say so rather than guessin
 ALLOWED_MEDIA = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 
 
-class AIUnavailable(Exception):
-    pass
+from .llm import AIUnavailable, chat  # noqa: E402,F401  (AIUnavailable boshqa modullar uchun ham shu yerdan)
 
 
 def analyze_image(file_obj, content_type, hint=""):
-    if not settings.ANTHROPIC_API_KEY:
-        raise AIUnavailable("ANTHROPIC_API_KEY sozlanmagan")
-    import anthropic
-
     from .guide import to_jpeg_b64
 
     try:  # har qanday format (HEIC ham) JPEG'ga aylantiriladi va kichraytiriladi
         data = to_jpeg_b64(file_obj, max_side=2000)
     except Exception:
         raise ValueError("Rasmni o'qib bo'lmadi. JPEG, PNG, WEBP yoki HEIC yuklang")
-    content_type = "image/jpeg"
-    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
     text = PROMPT + (f"\n\nContext from the researcher: {hint}" if hint else "")
-    msg = client.messages.create(
-        model=settings.AI_MODEL,
-        max_tokens=2000,
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "image", "source": {"type": "base64", "media_type": content_type, "data": data}},
-                {"type": "text", "text": text},
-            ],
-        }],
-    )
-    raw = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
+    raw = chat([{"role": "user", "content": text}], max_tokens=2000, image_b64=data)
     m = re.search(r"\{.*\}", raw, re.S)
     if not m:
         return {"notes": raw, "confidence": 0}

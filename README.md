@@ -317,6 +317,17 @@ git add backend/apps/*/migrations && git commit -m "migratsiyalar"
 - **Excel'dan import**: Admin → yon menyu «Excel'dan import» → namuna faylni yuklab oling → to'ldiring →
   avval «Sinov rejimi» bilan yuklang → xatosiz bo'lsa, haqiqiy import. CSV ham qabul qilinadi.
 
+## AI provayderi: OpenAI yoki Anthropic
+
+Barcha AI imkoniyatlari (AI gid, rasmdan aniqlash, tadqiqotchi AI tahlili, AI tarjima, boshqa tillar) bitta
+modul orqali ishlaydi — `apps/ai/llm.py`. Render → Environment:
+
+```
+AI_PROVIDER=openai          # yoki anthropic; bo'sh bo'lsa — qaysi kalit berilgan bo'lsa, o'sha
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o         # rasmni o'qiy oladigan (vision) model bo'lishi shart
+```
+
 ## Keyingi bosqichlar
 
 - [ ] Haqiqiy bitiklarni mutaxassislar bilan kiritish, demo yozuvlarni o'chirish

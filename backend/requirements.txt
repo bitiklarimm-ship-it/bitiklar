@@ -26,3 +26,4 @@ django-cloudinary-storage>=0.3.0
 cloudinary>=1.40
 # AI orqali bitikni tahlil qilish (ixtiyoriy: ANTHROPIC_API_KEY)
 anthropic>=0.40
+openai>=1.40

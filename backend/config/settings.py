@@ -214,6 +214,11 @@ CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
 # AI tahlil (Anthropic Claude). Kalit bo'lmasa, endpoint 503 qaytaradi.
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 AI_MODEL = os.environ.get("AI_MODEL", "claude-sonnet-5-5")
+# AI provayderi: "anthropic" yoki "openai". Bo'sh bo'lsa — qaysi kalit berilgan bo'lsa, o'sha ishlatiladi.
+AI_PROVIDER = os.environ.get("AI_PROVIDER", "")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")  # rasmni o'qiy oladigan model bo'lishi kerak
+OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "")  # ixtiyoriy (proksi yoki mos xizmat)
 
 # OpenStreetMap xarita plitkalari Referer sarlavhasini talab qiladi (aks holda "Access blocked / 403").
 # Django standarti "same-origin" uni boshqa saytlarga yubormaydi — shuning uchun faqat domen nomi yuboriladi.

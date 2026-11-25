@@ -42,6 +42,13 @@ services:
         value: bitiklar-media
       - key: R2_PUBLIC_DOMAIN
         value: media.bitiklar.uz
+      # AI: OpenAI yoki Anthropic — qaysi kalit berilsa, o'sha ishlatiladi
+      - key: AI_PROVIDER
+        value: openai
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: DJANGO_SUPERUSER_USERNAME

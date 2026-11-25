@@ -11,13 +11,12 @@ import math
 import re
 from io import BytesIO
 
-from django.conf import settings
 from django.core.cache import cache
 
 from apps.catalog.models import Inscription
 from apps.catalog.textnorm import normalize
 
-from .service import AIUnavailable
+from .llm import chat
 
 LANG_NAMES = {"uz": "Uzbek (Latin script)", "ru": "Russian", "en": "English"}
 
@@ -48,18 +47,6 @@ Rules:
 - If the data does not answer the question, say so honestly and suggest what an expert or the sources could clarify.
 - Quranic and religious text: quote respectfully and accurately as given in the data; do not re-translate it differently.
 - Write ONLY in {lang}. No markdown tables. Plain paragraphs; you may use short bold-free headings ending with a colon."""
-
-
-def _client():
-    if not settings.ANTHROPIC_API_KEY:
-        raise AIUnavailable("AI hozircha yoqilmagan (ANTHROPIC_API_KEY sozlanmagan)")
-    import anthropic
-
-    return anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-
-
-def _text(msg):
-    return "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
 
 
 def catalogue_data(ins):
@@ -116,13 +103,7 @@ def explain(ins, mode, lang, question="", history=None):
     else:
         messages.append({"role": "user", "content": f"{data}\n\nTASK: {task}"})
 
-    msg = _client().messages.create(
-        model=settings.AI_MODEL,
-        max_tokens=900,
-        system=SYSTEM.format(lang=LANG_NAMES[lang]),
-        messages=messages,
-    )
-    answer = _text(msg)
+    answer = chat(messages, system=SYSTEM.format(lang=LANG_NAMES[lang]), max_tokens=900)
     if cache_key:
         cache.set(cache_key, answer, 60 * 60 * 24 * 7)
     return answer
@@ -171,15 +152,8 @@ def _distance(lat1, lng1, lat2, lng2):
 def identify(fileobj, lang="uz", lat=None, lng=None):
     lang = lang if lang in LANG_NAMES else "uz"
     data = to_jpeg_b64(fileobj)
-    msg = _client().messages.create(
-        model=settings.AI_MODEL,
-        max_tokens=1200,
-        messages=[{"role": "user", "content": [
-            {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": data}},
-            {"type": "text", "text": IDENTIFY_PROMPT.replace("{lang}", lang).replace("{lang_name}", LANG_NAMES[lang])},
-        ]}],
-    )
-    raw = _text(msg)
+    prompt = IDENTIFY_PROMPT.replace("{lang}", lang).replace("{lang_name}", LANG_NAMES[lang])
+    raw = chat([{"role": "user", "content": prompt}], max_tokens=1200, image_b64=data)
     m = re.search(r"\{.*\}", raw, re.S)
     try:
         reading = json.loads(m.group(0)) if m else {}
@@ -247,9 +221,8 @@ def fill_translations(ins):
     fields = "\n".join(f"{f}: {getattr(ins, f) or '(EMPTY)'}" for f in FILL_FIELDS)
     prompt = FILL_PROMPT.replace("{original}", ins.original_text).replace(
         "{translit}", ins.transliteration or "-").replace("{fields}", fields)
-    msg = _client().messages.create(model=settings.AI_MODEL, max_tokens=4000,
-                                    messages=[{"role": "user", "content": prompt}])
-    m = re.search(r"\{.*\}", _text(msg), re.S)
+    raw = chat([{"role": "user", "content": prompt}], max_tokens=4000)
+    m = re.search(r"\{.*\}", raw, re.S)
     try:
         data = json.loads(m.group(0)) if m else {}
     except json.JSONDecodeError:
@@ -285,9 +258,8 @@ def translate_for_visitor(ins, target):
     prompt = (f"Translate into {EXTRA_LANGS[target]} for museum visitors. Keep proper names in their usual form in that "
               f"language; Qur'anic text should follow a standard, respectful rendering. Return ONLY JSON "
               f'{{"title": "...", "translation": "..."}}.\n\nTITLE: {src_title}\n\nTEXT:\n{src}')
-    msg = _client().messages.create(model=settings.AI_MODEL, max_tokens=1500,
-                                    messages=[{"role": "user", "content": prompt}])
-    m = re.search(r"\{.*\}", _text(msg), re.S)
+    raw = chat([{"role": "user", "content": prompt}], max_tokens=1500)
+    m = re.search(r"\{.*\}", raw, re.S)
     try:
         data = json.loads(m.group(0)) if m else {}
     except json.JSONDecodeError:
