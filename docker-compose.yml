@@ -1,0 +1,41 @@
+# VPS uchun: bitta ilova konteyneri (sayt + API + admin) va PostgreSQL
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bitiklar
+      POSTGRES_USER: bitiklar
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bitiklar}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bitiklar"]
+      interval: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:8080}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://bitiklar:${POSTGRES_PASSWORD:-bitiklar}@db:5432/bitiklar
+      PORT: "8080"
+    volumes:
+      - media:/app/backend/media
+      - backups:/app/backend/backups
+      - ./backend/apps/accounts/migrations:/app/backend/apps/accounts/migrations
+      - ./backend/apps/catalog/migrations:/app/backend/apps/catalog/migrations
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:
+  media:
+  backups:
